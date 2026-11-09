@@ -1,0 +1,430 @@
+const DATA_URL = './data/questions.json';
+const STORAGE_KEY = 'sgcc-question-progress-v1';
+const CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
+const CATEGORY_DESCRIPTIONS = {
+  '单选': '每题选择一个正确答案',
+  '多选两选': '每题有两个正确答案',
+  '多选三选': '重点识别唯一错误项',
+  '多选全选': '四个选项全部正确',
+  '判断对': '快速熟悉正确表述',
+  '判断错': '重点记忆错误原因',
+};
+
+const app = document.querySelector('#app');
+const backButton = document.querySelector('#backButton');
+const homeButton = document.querySelector('#homeButton');
+const statsButton = document.querySelector('#statsButton');
+const dataButton = document.querySelector('#dataButton');
+const importInput = document.querySelector('#importInput');
+const toast = document.querySelector('#toast');
+
+let questions = [];
+let metadata = {};
+let progress = loadProgress();
+let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
+
+function loadProgress() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (stored?.version === 1 && stored.questions) return stored;
+  } catch (_) {}
+  return { version: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), questions: {} };
+}
+
+function saveProgress() {
+  progress.updatedAt = new Date().toISOString();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function getRecord(id) {
+  const key = String(id);
+  if (!progress.questions[key]) {
+    progress.questions[key] = { attempts: 0, correct: 0, wrong: 0, views: 0, known: null, recent: [], lastAnswered: null, lastResult: null, lastViewed: null };
+  }
+  return progress.questions[key];
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('show'), 2100);
+}
+
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function summaryFor(items = questions) {
+  const ids = new Set(items.map(q => String(q.question_no)));
+  const records = Object.entries(progress.questions).filter(([id]) => ids.has(id));
+  const attempts = records.reduce((sum, [, r]) => sum + (r.attempts || 0), 0);
+  const correct = records.reduce((sum, [, r]) => sum + (r.correct || 0), 0);
+  const wrong = records.reduce((sum, [, r]) => sum + (r.wrong || 0), 0);
+  const touched = records.filter(([, r]) => (r.attempts || 0) > 0).length;
+  return { attempts, correct, wrong, touched, accuracy: attempts ? Math.round(correct / attempts * 100) : 0 };
+}
+
+function smartScore(q) {
+  const r = getRecord(q.question_no);
+  const errorRate = r.attempts ? r.wrong / r.attempts : 0;
+  const recentErrors = (r.recent || []).filter(x => !x).length;
+  return r.wrong * 12 + errorRate * 8 + recentErrors * 4 + (r.attempts === 0 ? 2 : 0) - r.correct * 0.15;
+}
+
+function setHeader(canBack) {
+  backButton.classList.toggle('hidden', !canBack);
+}
+
+function renderHome() {
+  view = { ...view, screen: 'home', mode: null, category: null, origin: null, session: [], index: 0, selected: new Set(), answered: false, sessionResults: {} };
+  setHeader(false);
+  const s = summaryFor();
+  const focus = questions.filter(q => getRecord(q.question_no).wrong > 0).length;
+  app.innerHTML = `
+    <section class="hero">
+      <p class="eyebrow">短期冲刺 · 记录保存在本机</p>
+      <h1>先理解，再反复刷错题</h1>
+      <p>先选择学习模式，再进入六类题目。刷题结果会自动统计，错误越多的题目会在智能顺序中越靠前。</p>
+    </section>
+    <section class="summary-grid">
+      <article class="summary-card"><strong>${s.touched}</strong><span>已做题目</span></article>
+      <article class="summary-card"><strong>${s.accuracy}%</strong><span>累计正确率</span></article>
+      <article class="summary-card"><strong>${focus}</strong><span>重点复习</span></article>
+    </section>
+    <div class="section-title"><div><h2>选择模式</h2><p>进入模式后再选择题目分类</p></div></div>
+    <section class="mode-grid">
+      <button class="mode-card" data-mode="review">
+        <span class="mode-icon">阅</span><h3>背题模式</h3>
+        <p>题干、正确答案和解析同时显示，可标记“记住了”或“还不熟”。</p>
+      </button>
+      <button class="mode-card" data-mode="practice">
+        <span class="mode-icon">练</span><h3>刷题模式</h3>
+        <p>先独立作答，再显示答案和解析，自动记录每题正确与错误次数。</p>
+      </button>
+      <button class="mode-card" id="randomQuiz">
+        <span class="mode-icon">随</span><h3>随机刷题</h3>
+        <p>设置题库范围和题目数量，无重复随机抽题，完成后查看本组正确率。</p>
+      </button>
+    </section>
+    <div class="section-title"><div><h2>快速入口</h2><p>按错误频率优先</p></div></div>
+    <section class="panel">
+      ${focus ? `<button id="focusPractice" class="button button-primary" style="width:100%">开始重点复习（${focus}题）</button>` : `<div class="empty">完成一些刷题后，这里会出现你的重点复习题。</div>`}
+    </section>`;
+  app.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => renderCategories(button.dataset.mode)));
+  app.querySelector('#randomQuiz')?.addEventListener('click', renderRandomSetup);
+  app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
+}
+
+function renderCategories(mode) {
+  view.mode = mode;
+  view.screen = 'categories';
+  setHeader(true);
+  const title = mode === 'review' ? '背题模式' : '刷题模式';
+  const cards = CATEGORY_ORDER.map(category => {
+    const items = questions.filter(q => q.practice_category === category);
+    const s = summaryFor(items);
+    const percent = Math.round(s.touched / items.length * 100);
+    return `<button class="category-card" data-category="${category}">
+      <div class="category-top"><h3>${category}</h3><span class="category-count">${items.length}题</span></div>
+      <div class="category-meta"><span>${CATEGORY_DESCRIPTIONS[category]}</span><span>正确率 ${s.accuracy}%</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${mode === 'review' ? '答案和解析始终显示，适合快速背诵。' : '每次提交都会记录到当前浏览器。'}</p></section>
+    <div class="section-title"><div><h2>六类题目</h2><p>合计 ${questions.length} 题</p></div></div>
+    <section class="category-grid">${cards}</section>`;
+  app.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => startSession(mode, button.dataset.category)));
+}
+
+function renderRandomSetup() {
+  view = { ...view, screen: 'randomSetup', mode: 'practice', category: '随机组卷', origin: 'random', session: [], index: 0, selected: new Set(), answered: false, sessionResults: {} };
+  setHeader(true);
+  const scopeOptions = ['全部题库', ...CATEGORY_ORDER].map(scope => `<option value="${scope}" ${view.randomScope === scope ? 'selected' : ''}>${scope}</option>`).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">随机刷题</p><h1>自己设置这一组刷多少题</h1><p>从所选范围内无重复随机抽取。每次重新开始都会生成一组新题，作答结果照常计入个人统计。</p></section>
+    <div class="section-title"><div><h2>组卷设置</h2><p>最多 ${questions.length} 题</p></div></div>
+    <section class="panel random-panel">
+      <label class="field-label" for="randomScope">题库范围</label>
+      <select id="randomScope" class="select random-select">${scopeOptions}</select>
+      <label class="field-label" for="randomCount">题目数量</label>
+      <div class="random-controls">
+        <input id="randomCount" class="number-input" type="number" min="1" max="${questions.length}" inputmode="numeric" value="${view.randomCount}">
+        <button id="startRandom" class="button button-primary">开始随机刷题</button>
+      </div>
+      <div class="preset-grid" aria-label="常用题数">
+        ${[10, 20, 30, 50, 100].map(count => `<button class="preset-button" data-random-count="${count}">${count}题</button>`).join('')}
+      </div>
+      <p id="randomLimit" class="random-note">全部题库可抽取 ${questions.length} 题。</p>
+    </section>`;
+  const scopeSelect = app.querySelector('#randomScope');
+  const countInput = app.querySelector('#randomCount');
+  const limitText = app.querySelector('#randomLimit');
+  const updateLimit = () => {
+    const poolSize = getRandomPool(scopeSelect.value).length;
+    countInput.max = poolSize;
+    limitText.textContent = `${scopeSelect.value}可抽取 ${poolSize} 题。`;
+  };
+  scopeSelect.addEventListener('change', updateLimit);
+  app.querySelectorAll('[data-random-count]').forEach(button => button.addEventListener('click', () => { countInput.value = button.dataset.randomCount; }));
+  app.querySelector('#startRandom').addEventListener('click', () => startRandomSession(scopeSelect.value, Number(countInput.value)));
+  updateLimit();
+}
+
+function getRandomPool(scope) {
+  return scope === '全部题库' ? [...questions] : questions.filter(q => q.practice_category === scope);
+}
+
+function shuffleQuestions(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function startRandomSession(scope, requestedCount) {
+  const pool = getRandomPool(scope);
+  if (!Number.isInteger(requestedCount) || requestedCount < 1) {
+    showToast('请输入不少于1的整数题数');
+    return;
+  }
+  if (requestedCount > pool.length) {
+    showToast(`${scope}最多可抽取${pool.length}题`);
+    return;
+  }
+  const session = shuffleQuestions(pool).slice(0, requestedCount);
+  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, randomScope: scope, randomCount: requestedCount, sessionResults: {} };
+  setHeader(true);
+  renderQuestion();
+}
+
+function renderRandomComplete() {
+  view.screen = 'randomComplete';
+  setHeader(true);
+  const results = Object.values(view.sessionResults || {});
+  const answered = results.length;
+  const correct = results.filter(Boolean).length;
+  const accuracy = answered ? Math.round(correct / answered * 100) : 0;
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">本组完成</p><h1>${correct}/${view.session.length} 题正确</h1><p>本组正确率 ${accuracy}%。结果已计入当前浏览器的个人统计。</p></section>
+    <section class="summary-grid"><article class="summary-card"><strong>${view.session.length}</strong><span>本组题数</span></article><article class="summary-card"><strong>${correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${view.session.length - correct}</strong><span>回答错误</span></article></section>
+    <section class="panel"><div class="actions"><button id="randomSettings" class="button button-secondary">修改设置</button><button id="randomAgain" class="button button-primary">同样设置再来一组</button></div></section>`;
+  app.querySelector('#randomSettings').addEventListener('click', renderRandomSetup);
+  app.querySelector('#randomAgain').addEventListener('click', () => startRandomSession(view.randomScope, view.randomCount));
+}
+
+function buildSession(category, order = 'smart') {
+  let items = questions.filter(q => q.practice_category === category);
+  if (order === 'smart') items = [...items].sort((a, b) => smartScore(b) - smartScore(a) || a.question_no - b.question_no);
+  if (order === 'random') items = shuffleQuestions(items);
+  if (order === 'sequential') items = [...items].sort((a, b) => a.question_no - b.question_no);
+  return items;
+}
+
+function startSession(mode, category, order = mode === 'practice' ? 'smart' : 'sequential') {
+  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(category, order), selected: new Set(), answered: false, correct: false, sessionResults: {} };
+  setHeader(true);
+  renderQuestion();
+}
+
+function startFocusPractice() {
+  const items = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a));
+  view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: 0, session: items, selected: new Set(), answered: false, correct: false, sessionResults: {} };
+  setHeader(true);
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = view.session[view.index];
+  if (!q) {
+    app.innerHTML = `<section class="panel empty">当前分类没有题目。</section>`;
+    return;
+  }
+  if (view.mode === 'review') {
+    const r = getRecord(q.question_no);
+    r.views += 1; r.lastViewed = new Date().toISOString(); saveProgress();
+  }
+  const r = getRecord(q.question_no);
+  const answerVisible = view.mode === 'review' || view.answered;
+  const options = Object.entries(q.options).map(([letter, text]) => {
+    const selected = view.selected.has(letter);
+    const isCorrect = answerVisible && q.answer.includes(letter);
+    const isWrong = answerVisible && selected && !q.answer.includes(letter);
+    return `<button class="option ${selected ? 'selected' : ''} ${isCorrect ? 'correct' : ''} ${isWrong ? 'wrong' : ''}" data-option="${letter}" ${answerVisible ? 'disabled' : ''}>
+      <span class="option-letter">${letter}</span><span>${escapeHtml(text)}</span>
+    </button>`;
+  }).join('');
+  const statsText = r.attempts ? `已答 ${r.attempts} 次 · 对 ${r.correct} · 错 ${r.wrong} · 正确率 ${Math.round(r.correct / r.attempts * 100)}%` : '尚未作答';
+  const answerBox = answerVisible ? `<div class="answer-box">
+    ${view.mode === 'practice' ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${q.answer.join('、')}</strong>
+    <p>${escapeHtml(q.explanation)}</p>
+  </div>` : '';
+  app.innerHTML = `
+    <div class="toolbar">
+      <div class="toolbar-left"><span class="pill">${view.mode === 'review' ? '背题' : '刷题'} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span></div>
+      <div class="toolbar-right">
+        ${view.category !== '重点复习' && view.origin !== 'random' ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
+      </div>
+    </div>
+    <article class="question-card">
+      <div class="question-head"><span class="question-number">第 ${q.question_no} 题</span><span class="difficulty">${q.difficulty_source || '未标难度'} · ${statsText}</span></div>
+      <p class="stem">${escapeHtml(q.stem)}</p>
+      <div class="options">${options}</div>
+      ${answerBox}
+      ${view.mode === 'review' ? `<div class="actions"><button id="notKnown" class="button button-secondary">还不熟</button><button id="known" class="button button-primary">记住了</button></div>` : `<div class="actions"><button id="previousQuestion" class="button button-secondary" ${view.index === 0 ? 'disabled' : ''}>上一题</button>${view.answered ? `<button id="nextQuestion" class="button button-primary">下一题</button>` : `<button id="submitAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>提交答案</button>`}</div>`}
+    </article>`;
+  app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => toggleOption(button.dataset.option)));
+  app.querySelector('#submitAnswer')?.addEventListener('click', submitAnswer);
+  app.querySelector('#nextQuestion')?.addEventListener('click', nextQuestion);
+  app.querySelector('#previousQuestion')?.addEventListener('click', previousQuestion);
+  app.querySelector('#known')?.addEventListener('click', () => markKnown(true));
+  app.querySelector('#notKnown')?.addEventListener('click', () => markKnown(false));
+  app.querySelector('#orderSelect')?.addEventListener('change', event => startSession(view.mode, view.category, event.target.value));
+}
+
+function toggleOption(letter) {
+  if (view.answered || view.mode === 'review') return;
+  const q = view.session[view.index];
+  if (q.answer_count === 1) view.selected = new Set([letter]);
+  else if (view.selected.has(letter)) view.selected.delete(letter);
+  else view.selected.add(letter);
+  renderQuestion();
+}
+
+function submitAnswer() {
+  const q = view.session[view.index];
+  const chosen = [...view.selected].sort();
+  const correct = chosen.length === q.answer.length && chosen.every((item, index) => item === [...q.answer].sort()[index]);
+  const r = getRecord(q.question_no);
+  r.attempts += 1;
+  r.correct += correct ? 1 : 0;
+  r.wrong += correct ? 0 : 1;
+  r.lastAnswered = new Date().toISOString();
+  r.lastResult = correct;
+  r.recent = [...(r.recent || []), correct].slice(-10);
+  if (view.origin === 'random') view.sessionResults[String(q.question_no)] = correct;
+  saveProgress();
+  view.answered = true;
+  view.correct = correct;
+  renderQuestion();
+}
+
+function nextQuestion() {
+  if (view.index < view.session.length - 1) view.index += 1;
+  else if (view.origin === 'random') {
+    renderRandomComplete();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  } else view.index = 0;
+  view.selected = new Set(); view.answered = false; view.correct = false;
+  renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function previousQuestion() {
+  if (view.index > 0) view.index -= 1;
+  view.selected = new Set(); view.answered = false; view.correct = false;
+  renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function markKnown(known) {
+  const q = view.session[view.index];
+  const r = getRecord(q.question_no);
+  r.known = known; saveProgress();
+  showToast(known ? '已标记为记住' : '已加入重点复习');
+  if (!known) r.wrong = Math.max(1, r.wrong);
+  saveProgress();
+  nextQuestion();
+}
+
+function renderStats() {
+  view.screen = 'stats'; setHeader(true);
+  const s = summaryFor();
+  const focus = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a)).slice(0, 50);
+  const categoryRows = CATEGORY_ORDER.map(category => {
+    const items = questions.filter(q => q.practice_category === category);
+    const stat = summaryFor(items);
+    return `<div class="stat-row"><strong>${category}</strong><div><span>${stat.touched}/${items.length} 题已作答</span><small>累计 ${stat.attempts} 次</small></div><div class="stat-value">正确率<br><b>${stat.accuracy}%</b></div></div>`;
+  }).join('');
+  const focusRows = focus.map(q => {
+    const r = getRecord(q.question_no);
+    return `<button class="stat-row" data-focus-question="${q.question_no}"><strong>第${q.question_no}题</strong><div><span>${q.practice_category}</span><small>答错 ${r.wrong} 次 / 共答 ${r.attempts} 次</small></div><div class="stat-value">${r.attempts ? Math.round(r.correct / r.attempts * 100) : 0}%</div></button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">学习统计</p><h1>把时间花在最容易错的题上</h1><p>统计仅来自当前浏览器。智能顺序会综合错误次数、错误率和最近答题结果排序。</p></section>
+    <section class="summary-grid"><article class="summary-card"><strong>${s.attempts}</strong><span>累计作答</span></article><article class="summary-card"><strong>${s.correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${s.wrong}</strong><span>回答错误</span></article></section>
+    <div class="section-title"><div><h2>分类进度</h2></div></div><section class="stats-list">${categoryRows}</section>
+    <div class="section-title"><div><h2>重点复习</h2><p>最多显示50题</p></div></div><section class="stats-list">${focusRows || '<div class="panel empty">暂时没有错题。</div>'}</section>`;
+  app.querySelectorAll('[data-focus-question]').forEach(button => button.addEventListener('click', () => {
+    const number = Number(button.dataset.focusQuestion);
+    const items = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a));
+    view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: Math.max(0, items.findIndex(q => q.question_no === number)), session: items, selected: new Set(), answered: false, correct: false, sessionResults: {} };
+    renderQuestion();
+  }));
+}
+
+function showDataDialog() {
+  const existing = document.querySelector('#dataDialog');
+  if (existing) existing.remove();
+  const dialog = document.createElement('dialog');
+  dialog.id = 'dataDialog';
+  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>学习记录只保存在当前浏览器。建议偶尔导出备份；导入会合并并覆盖同题记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出学习记录</button><button id="importData" class="button button-secondary">导入学习记录</button><button id="resetData" class="button button-danger">清空全部学习记录</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
+  document.body.appendChild(dialog); dialog.showModal();
+  dialog.querySelector('#closeDialog').onclick = () => dialog.close();
+  dialog.querySelector('#exportData').onclick = exportData;
+  dialog.querySelector('#importData').onclick = () => importInput.click();
+  dialog.querySelector('#resetData').onclick = () => {
+    if (confirm('确定清空当前浏览器中的全部学习记录吗？此操作无法撤销。')) {
+      localStorage.removeItem(STORAGE_KEY); progress = loadProgress(); dialog.close(); renderHome(); showToast('学习记录已清空');
+    }
+  };
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `国网刷题记录_${new Date().toISOString().slice(0,10)}.json`;
+  link.click(); URL.revokeObjectURL(link.href); showToast('学习记录已导出');
+}
+
+importInput.addEventListener('change', async event => {
+  const file = event.target.files?.[0]; if (!file) return;
+  try {
+    const imported = JSON.parse(await file.text());
+    if (imported?.version !== 1 || !imported.questions) throw new Error('格式不正确');
+    progress = imported; saveProgress(); showToast('学习记录已恢复'); renderHome();
+  } catch (_) { alert('无法导入：文件格式不正确。'); }
+  event.target.value = '';
+});
+
+function goBack() {
+  if (view.screen === 'question' && view.origin === 'random') renderRandomSetup();
+  else if (view.screen === 'question') renderCategories(view.mode);
+  else if (view.screen === 'randomComplete') renderRandomSetup();
+  else renderHome();
+}
+
+backButton.addEventListener('click', goBack);
+homeButton.addEventListener('click', renderHome);
+homeButton.addEventListener('keydown', event => { if (event.key === 'Enter') renderHome(); });
+statsButton.addEventListener('click', renderStats);
+dataButton.addEventListener('click', showDataDialog);
+
+async function init() {
+  try {
+    const response = await fetch(DATA_URL);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    questions = payload.questions;
+    metadata = payload.metadata;
+    renderHome();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  } catch (error) {
+    app.innerHTML = `<section class="panel empty"><h2>题库载入失败</h2><p>${escapeHtml(error.message)}</p><button class="button button-primary" onclick="location.reload()">重新载入</button></section>`;
+  }
+}
+
+init();
