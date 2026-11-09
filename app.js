@@ -1,13 +1,19 @@
 const DATA_URL = './data/questions.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
-const CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
-const CATEGORY_DESCRIPTIONS = {
+const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
+const PRACTICE_CATEGORY_ORDER = ['单选题', '多选题', '判断题'];
+const REVIEW_CATEGORY_DESCRIPTIONS = {
   '单选': '每题选择一个正确答案',
   '多选两选': '每题有两个正确答案',
   '多选三选': '重点识别唯一错误项',
   '多选全选': '四个选项全部正确',
   '判断对': '快速熟悉正确表述',
   '判断错': '重点记忆错误原因',
+};
+const PRACTICE_CATEGORY_DESCRIPTIONS = {
+  '单选题': '每题选择一个正确答案',
+  '多选题': '混合两选、三选和全选题',
+  '判断题': '正确题与错误题混合练习',
 };
 
 const app = document.querySelector('#app');
@@ -86,7 +92,7 @@ function renderHome() {
     <section class="hero">
       <p class="eyebrow">短期冲刺 · 记录保存在本机</p>
       <h1>先理解，再反复刷错题</h1>
-      <p>先选择学习模式，再进入六类题目。刷题结果会自动统计，错误越多的题目会在智能顺序中越靠前。</p>
+      <p>背题按六类细分，刷题按单选、多选、判断三类练习。刷题结果会自动统计，错误越多的题目会在智能顺序中越靠前。</p>
     </section>
     <section class="summary-grid">
       <article class="summary-card"><strong>${s.touched}</strong><span>已做题目</span></article>
@@ -121,20 +127,23 @@ function renderCategories(mode) {
   view.mode = mode;
   view.screen = 'categories';
   setHeader(true);
-  const title = mode === 'review' ? '背题模式' : '刷题模式';
-  const cards = CATEGORY_ORDER.map(category => {
-    const items = questions.filter(q => q.practice_category === category);
+  const isReview = mode === 'review';
+  const title = isReview ? '背题模式' : '刷题模式';
+  const categories = isReview ? REVIEW_CATEGORY_ORDER : PRACTICE_CATEGORY_ORDER;
+  const descriptions = isReview ? REVIEW_CATEGORY_DESCRIPTIONS : PRACTICE_CATEGORY_DESCRIPTIONS;
+  const cards = categories.map(category => {
+    const items = getCategoryQuestions(mode, category);
     const s = summaryFor(items);
     const percent = Math.round(s.touched / items.length * 100);
     return `<button class="category-card" data-category="${category}">
       <div class="category-top"><h3>${category}</h3><span class="category-count">${items.length}题</span></div>
-      <div class="category-meta"><span>${CATEGORY_DESCRIPTIONS[category]}</span><span>正确率 ${s.accuracy}%</span></div>
+      <div class="category-meta"><span>${descriptions[category]}</span><span>正确率 ${s.accuracy}%</span></div>
       <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
     </button>`;
   }).join('');
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${mode === 'review' ? '答案和解析始终显示，适合快速背诵。' : '每次提交都会记录到当前浏览器。'}</p></section>
-    <div class="section-title"><div><h2>六类题目</h2><p>合计 ${questions.length} 题</p></div></div>
+    <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${isReview ? '答案和解析始终显示，按答案特征细分为六类。' : '按基础题型混合答案结构，不提前透露多选数量或判断正误。'}</p></section>
+    <div class="section-title"><div><h2>${isReview ? '六类背题' : '三类刷题'}</h2><p>合计 ${questions.length} 题</p></div></div>
     <section class="category-grid">${cards}</section>`;
   app.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => startSession(mode, button.dataset.category)));
 }
@@ -142,7 +151,7 @@ function renderCategories(mode) {
 function renderRandomSetup() {
   view = { ...view, screen: 'randomSetup', mode: 'practice', category: '随机组卷', origin: 'random', session: [], index: 0, selected: new Set(), answered: false, sessionResults: {} };
   setHeader(true);
-  const scopeOptions = ['全部题库', ...CATEGORY_ORDER].map(scope => `<option value="${scope}" ${view.randomScope === scope ? 'selected' : ''}>${scope}</option>`).join('');
+  const scopeOptions = ['全部题库', ...PRACTICE_CATEGORY_ORDER].map(scope => `<option value="${scope}" ${view.randomScope === scope ? 'selected' : ''}>${scope}</option>`).join('');
   app.innerHTML = `
     <section class="hero"><p class="eyebrow">随机刷题</p><h1>自己设置这一组刷多少题</h1><p>从所选范围内无重复随机抽取。每次重新开始都会生成一组新题，作答结果照常计入个人统计。</p></section>
     <div class="section-title"><div><h2>组卷设置</h2><p>最多 ${questions.length} 题</p></div></div>
@@ -174,7 +183,7 @@ function renderRandomSetup() {
 }
 
 function getRandomPool(scope) {
-  return scope === '全部题库' ? [...questions] : questions.filter(q => q.practice_category === scope);
+  return scope === '全部题库' ? [...questions] : questions.filter(q => q.question_type === scope);
 }
 
 function shuffleQuestions(items) {
@@ -219,8 +228,14 @@ function renderRandomComplete() {
   app.querySelector('#randomAgain').addEventListener('click', () => startRandomSession(view.randomScope, view.randomCount));
 }
 
-function buildSession(category, order = 'smart') {
-  let items = questions.filter(q => q.practice_category === category);
+function getCategoryQuestions(mode, category) {
+  return mode === 'review'
+    ? questions.filter(q => q.practice_category === category)
+    : questions.filter(q => q.question_type === category);
+}
+
+function buildSession(mode, category, order = 'smart') {
+  let items = getCategoryQuestions(mode, category);
   if (order === 'smart') items = [...items].sort((a, b) => smartScore(b) - smartScore(a) || a.question_no - b.question_no);
   if (order === 'random') items = shuffleQuestions(items);
   if (order === 'sequential') items = [...items].sort((a, b) => a.question_no - b.question_no);
@@ -228,7 +243,7 @@ function buildSession(category, order = 'smart') {
 }
 
 function startSession(mode, category, order = mode === 'practice' ? 'smart' : 'sequential') {
-  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(category, order), selected: new Set(), answered: false, correct: false, sessionResults: {} };
+  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
@@ -367,7 +382,7 @@ function renderStats() {
   view.screen = 'stats'; setHeader(true);
   const s = summaryFor();
   const focus = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a)).slice(0, 50);
-  const categoryRows = CATEGORY_ORDER.map(category => {
+  const categoryRows = REVIEW_CATEGORY_ORDER.map(category => {
     const items = questions.filter(q => q.practice_category === category);
     const stat = summaryFor(items);
     return `<div class="stat-row"><strong>${category}</strong><div><span>${stat.touched}/${items.length} 题已作答</span><small>累计 ${stat.attempts} 次</small></div><div class="stat-value">正确率<br><b>${stat.accuracy}%</b></div></div>`;
