@@ -22,6 +22,7 @@ let questions = [];
 let metadata = {};
 let progress = loadProgress();
 let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
+let lastSwipeAt = 0;
 
 function loadProgress() {
   try {
@@ -96,7 +97,7 @@ function renderHome() {
     <section class="mode-grid">
       <button class="mode-card" data-mode="review">
         <span class="mode-icon">阅</span><h3>背题模式</h3>
-        <p>题干、正确答案和解析同时显示，可标记“记住了”或“还不熟”。</p>
+        <p>题干、正确答案和解析同时显示，左右滑动即可快速切换题目。</p>
       </button>
       <button class="mode-card" data-mode="practice">
         <span class="mode-icon">练</span><h3>刷题模式</h3>
@@ -207,10 +208,12 @@ function renderRandomComplete() {
   const results = Object.values(view.sessionResults || {});
   const answered = results.length;
   const correct = results.filter(Boolean).length;
+  const wrong = answered - correct;
+  const unanswered = view.session.length - answered;
   const accuracy = answered ? Math.round(correct / answered * 100) : 0;
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">本组完成</p><h1>${correct}/${view.session.length} 题正确</h1><p>本组正确率 ${accuracy}%。结果已计入当前浏览器的个人统计。</p></section>
-    <section class="summary-grid"><article class="summary-card"><strong>${view.session.length}</strong><span>本组题数</span></article><article class="summary-card"><strong>${correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${view.session.length - correct}</strong><span>回答错误</span></article></section>
+    <section class="hero"><p class="eyebrow">本组完成</p><h1>${correct}/${answered || 0} 题正确</h1><p>已作答 ${answered} 题，正确率 ${accuracy}%${unanswered ? `，另有 ${unanswered} 题未作答` : ''}。结果已计入当前浏览器的个人统计。</p></section>
+    <section class="summary-grid"><article class="summary-card"><strong>${view.session.length}</strong><span>本组题数</span></article><article class="summary-card"><strong>${correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${wrong}</strong><span>回答错误</span></article></section>
     <section class="panel"><div class="actions"><button id="randomSettings" class="button button-secondary">修改设置</button><button id="randomAgain" class="button button-primary">同样设置再来一组</button></div></section>`;
   app.querySelector('#randomSettings').addEventListener('click', renderRandomSetup);
   app.querySelector('#randomAgain').addEventListener('click', () => startRandomSession(view.randomScope, view.randomCount));
@@ -262,6 +265,14 @@ function renderQuestion() {
     ${view.mode === 'practice' ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${q.answer.join('、')}</strong>
     <p>${escapeHtml(q.explanation)}</p>
   </div>` : '';
+  const needsSubmitButton = view.mode === 'practice' && q.answer_count > 1 && !view.answered;
+  const gestureHint = view.mode === 'review'
+    ? '左滑下一题 · 右滑上一题'
+    : view.answered
+      ? '已显示解析 · 左滑下一题 · 右滑上一题'
+      : q.answer_count === 1
+        ? '点击选项立即提交 · 左右滑动切题'
+        : '选择所有答案后提交 · 左右滑动切题';
   app.innerHTML = `
     <div class="toolbar">
       <div class="toolbar-left"><span class="pill">${view.mode === 'review' ? '背题' : '刷题'} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span></div>
@@ -274,27 +285,30 @@ function renderQuestion() {
       <p class="stem">${escapeHtml(q.stem)}</p>
       <div class="options">${options}</div>
       ${answerBox}
-      ${view.mode === 'review' ? `<div class="actions"><button id="notKnown" class="button button-secondary">还不熟</button><button id="known" class="button button-primary">记住了</button></div>` : `<div class="actions"><button id="previousQuestion" class="button button-secondary" ${view.index === 0 ? 'disabled' : ''}>上一题</button>${view.answered ? `<button id="nextQuestion" class="button button-primary">下一题</button>` : `<button id="submitAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>提交答案</button>`}</div>`}
+      ${needsSubmitButton ? `<div class="actions single-action"><button id="submitAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>提交答案</button></div>` : ''}
+      <p class="gesture-hint">${gestureHint}</p>
     </article>`;
   app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => toggleOption(button.dataset.option)));
   app.querySelector('#submitAnswer')?.addEventListener('click', submitAnswer);
-  app.querySelector('#nextQuestion')?.addEventListener('click', nextQuestion);
-  app.querySelector('#previousQuestion')?.addEventListener('click', previousQuestion);
-  app.querySelector('#known')?.addEventListener('click', () => markKnown(true));
-  app.querySelector('#notKnown')?.addEventListener('click', () => markKnown(false));
   app.querySelector('#orderSelect')?.addEventListener('change', event => startSession(view.mode, view.category, event.target.value));
+  bindSwipeNavigation(app.querySelector('.question-card'));
 }
 
 function toggleOption(letter) {
-  if (view.answered || view.mode === 'review') return;
+  if (Date.now() - lastSwipeAt < 400 || view.answered || view.mode === 'review') return;
   const q = view.session[view.index];
-  if (q.answer_count === 1) view.selected = new Set([letter]);
-  else if (view.selected.has(letter)) view.selected.delete(letter);
+  if (q.answer_count === 1) {
+    view.selected = new Set([letter]);
+    submitAnswer();
+    return;
+  }
+  if (view.selected.has(letter)) view.selected.delete(letter);
   else view.selected.add(letter);
   renderQuestion();
 }
 
 function submitAnswer() {
+  if (Date.now() - lastSwipeAt < 400 || view.answered || !view.selected.size) return;
   const q = view.session[view.index];
   const chosen = [...view.selected].sort();
   const correct = chosen.length === q.answer.length && chosen.every((item, index) => item === [...q.answer].sort()[index]);
@@ -329,14 +343,24 @@ function previousQuestion() {
   renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function markKnown(known) {
-  const q = view.session[view.index];
-  const r = getRecord(q.question_no);
-  r.known = known; saveProgress();
-  showToast(known ? '已标记为记住' : '已加入重点复习');
-  if (!known) r.wrong = Math.max(1, r.wrong);
-  saveProgress();
-  nextQuestion();
+function bindSwipeNavigation(element) {
+  if (!element) return;
+  let start = null;
+  element.addEventListener('pointerdown', event => {
+    if (!event.isPrimary) return;
+    start = { x: event.clientX, y: event.clientY, id: event.pointerId };
+  });
+  element.addEventListener('pointerup', event => {
+    if (!start || event.pointerId !== start.id) return;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    start = null;
+    if (Math.abs(deltaX) < 55 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return;
+    lastSwipeAt = Date.now();
+    if (deltaX < 0) nextQuestion();
+    else previousQuestion();
+  });
+  element.addEventListener('pointercancel', () => { start = null; });
 }
 
 function renderStats() {
