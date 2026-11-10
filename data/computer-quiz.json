@@ -1,0 +1,1248 @@
+{
+  "metadata": {
+    "title": "计算机基础57条随机测试题库",
+    "version": "computer_quiz_v1",
+    "record_count": 72,
+    "source_knowledge_count": 57,
+    "scope": "仅依据计算机基础57条上分宝典",
+    "type_counts": {
+      "单选题": 24,
+      "多选题": 24,
+      "判断题": 24
+    }
+  },
+  "questions": [
+    {
+      "id": 1,
+      "source_id": 1,
+      "question_type": "单选题",
+      "stem": "世界上第一台通用电子数字计算机ENIAC诞生于哪里？",
+      "options": {
+        "A": "美国宾夕法尼亚大学",
+        "B": "英国剑桥大学",
+        "C": "美国哈佛大学",
+        "D": "德国柏林大学"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "1946年，美国宾夕法尼亚大学，ENIAC。"
+    },
+    {
+      "id": 2,
+      "source_id": 2,
+      "question_type": "单选题",
+      "stem": "第一代计算机采用的主要电子元器件是？",
+      "options": {
+        "A": "电子管",
+        "B": "晶体管",
+        "C": "中小规模集成电路",
+        "D": "大规模集成电路"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "第一代→电子管。"
+    },
+    {
+      "id": 3,
+      "source_id": 3,
+      "question_type": "单选题",
+      "stem": "计算机发展的总趋势是？",
+      "options": {
+        "A": "巨型化",
+        "B": "微型化",
+        "C": "智能化",
+        "D": "网络化"
+      },
+      "answer": [
+        "C"
+      ],
+      "answer_count": 1,
+      "explanation": "智能化是总趋势。"
+    },
+    {
+      "id": 4,
+      "source_id": 4,
+      "question_type": "单选题",
+      "stem": "计算机应用中最广泛的领域是？",
+      "options": {
+        "A": "科学计算",
+        "B": "数据处理",
+        "C": "过程控制",
+        "D": "人工智能"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "数据处理应用最广泛。"
+    },
+    {
+      "id": 5,
+      "source_id": 5,
+      "question_type": "单选题",
+      "stem": "按数据处理方式分类，不属于计算机类型的是？",
+      "options": {
+        "A": "数字式计算机",
+        "B": "模拟式计算机",
+        "C": "数字模拟混合式计算机",
+        "D": "分时计算机"
+      },
+      "answer": [
+        "D"
+      ],
+      "answer_count": 1,
+      "explanation": "按数据处理方式分为数字式、模拟式和数字模拟混合式。"
+    },
+    {
+      "id": 6,
+      "source_id": 6,
+      "question_type": "单选题",
+      "stem": "冯·诺依曼理论的核心思想是？",
+      "options": {
+        "A": "并行处理",
+        "B": "存储程序和程序控制",
+        "C": "面向对象",
+        "D": "云端计算"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "核心思想→存储程序和程序控制。"
+    },
+    {
+      "id": 7,
+      "source_id": 7,
+      "question_type": "单选题",
+      "stem": "CPU一次能够处理的二进制数据位数称为？",
+      "options": {
+        "A": "主频",
+        "B": "字长",
+        "C": "带宽",
+        "D": "容量"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "字长→CPU一次处理的二进制位数。"
+    },
+    {
+      "id": 8,
+      "source_id": 8,
+      "question_type": "单选题",
+      "stem": "下列存储器中具有易失性的是？",
+      "options": {
+        "A": "RAM",
+        "B": "ROM",
+        "C": "FLASH",
+        "D": "SSD"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "RAM断电后数据会丢失。"
+    },
+    {
+      "id": 9,
+      "source_id": 9,
+      "question_type": "单选题",
+      "stem": "在多级存储层次中，位置最高、存取速度最快的是？",
+      "options": {
+        "A": "外存",
+        "B": "内存",
+        "C": "Cache",
+        "D": "CPU内寄存器组"
+      },
+      "answer": [
+        "D"
+      ],
+      "answer_count": 1,
+      "explanation": "层次从上到下：寄存器、Cache、内存、外存。"
+    },
+    {
+      "id": 10,
+      "source_id": 10,
+      "question_type": "单选题",
+      "stem": "系统总线中通常为单向传输的是？",
+      "options": {
+        "A": "地址总线",
+        "B": "数据总线",
+        "C": "控制总线",
+        "D": "南桥总线"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "地址总线单向；数据总线、控制总线双向。"
+    },
+    {
+      "id": 11,
+      "source_id": 11,
+      "question_type": "单选题",
+      "stem": "机械硬盘怕震动的直接原因是？",
+      "options": {
+        "A": "盘片容易退磁",
+        "B": "磁头与盘面距离很近",
+        "C": "接口容易松动",
+        "D": "缓存容量较小"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "磁头与盘面距离很近。"
+    },
+    {
+      "id": 12,
+      "source_id": 12,
+      "question_type": "单选题",
+      "stem": "打印机一般采用的减色法颜色系统是？",
+      "options": {
+        "A": "RGB",
+        "B": "CMYK",
+        "C": "HSV",
+        "D": "YUV"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "打印机通常采用CMYK减色系统。"
+    },
+    {
+      "id": 13,
+      "source_id": 13,
+      "question_type": "单选题",
+      "stem": "十六进制数常用的尾符是？",
+      "options": {
+        "A": "B",
+        "B": "O",
+        "C": "D",
+        "D": "H"
+      },
+      "answer": [
+        "D"
+      ],
+      "answer_count": 1,
+      "explanation": "十六进制尾符为16或H。"
+    },
+    {
+      "id": 14,
+      "source_id": 14,
+      "question_type": "单选题",
+      "stem": "一位十六进制数可用几位二进制数表示？",
+      "options": {
+        "A": "2位",
+        "B": "3位",
+        "C": "4位",
+        "D": "8位"
+      },
+      "answer": [
+        "C"
+      ],
+      "answer_count": 1,
+      "explanation": "一位十六进制→四位二进制。"
+    },
+    {
+      "id": 15,
+      "source_id": 15,
+      "question_type": "单选题",
+      "stem": "计算机中基本的存储单位是？",
+      "options": {
+        "A": "位",
+        "B": "字节",
+        "C": "千字节",
+        "D": "字"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "字节（B）是基本存储单位。"
+    },
+    {
+      "id": 16,
+      "source_id": 16,
+      "question_type": "单选题",
+      "stem": "按ASCII码值从大到小排列，正确的是？",
+      "options": {
+        "A": "数字字符＞大写字母＞小写字母",
+        "B": "小写字母＞大写字母＞数字字符",
+        "C": "大写字母＞小写字母＞数字字符",
+        "D": "小写字母＞数字字符＞大写字母"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "ASCII码值：小写字母＞大写字母＞数字字符。"
+    },
+    {
+      "id": 17,
+      "source_id": 17,
+      "question_type": "单选题",
+      "stem": "用1个字节表示补码时，真值范围是？",
+      "options": {
+        "A": "-127～+127",
+        "B": "-128～+127",
+        "C": "-128～+128",
+        "D": "0～255"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "补码范围→-128～+127。"
+    },
+    {
+      "id": 18,
+      "source_id": 18,
+      "question_type": "单选题",
+      "stem": "不含任何软件的计算机称为？",
+      "options": {
+        "A": "主机",
+        "B": "裸机",
+        "C": "工作站",
+        "D": "服务器"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "不含任何软件→裸机。"
+    },
+    {
+      "id": 19,
+      "source_id": 19,
+      "question_type": "单选题",
+      "stem": "计算机能直接识别和执行的语言是？",
+      "options": {
+        "A": "机器语言",
+        "B": "汇编语言",
+        "C": "C语言",
+        "D": "Python"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "机器语言可被计算机直接识别和执行。"
+    },
+    {
+      "id": 20,
+      "source_id": 20,
+      "question_type": "单选题",
+      "stem": "多个任务在同一时间间隔内完成，宏观上同时进行，称为？",
+      "options": {
+        "A": "并发",
+        "B": "并行",
+        "C": "异步",
+        "D": "共享"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "并发→同一时间间隔完成。"
+    },
+    {
+      "id": 21,
+      "source_id": 21,
+      "question_type": "单选题",
+      "stem": "C语言中，else子句总是与哪个if配对？",
+      "options": {
+        "A": "最前面的if",
+        "B": "同一行的if",
+        "C": "前面最近的未配对if",
+        "D": "缩进最深的if"
+      },
+      "answer": [
+        "C"
+      ],
+      "answer_count": 1,
+      "explanation": "else与前面最近的未配对if配对。"
+    },
+    {
+      "id": 22,
+      "source_id": 22,
+      "question_type": "单选题",
+      "stem": "Python中表示幂运算的运算符是？",
+      "options": {
+        "A": "^",
+        "B": "**",
+        "C": "//",
+        "D": "%"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "Python幂运算符为**。"
+    },
+    {
+      "id": 23,
+      "source_id": 23,
+      "question_type": "单选题",
+      "stem": "IEEE754双精度浮点数的阶码占多少位？",
+      "options": {
+        "A": "8位",
+        "B": "10位",
+        "C": "11位",
+        "D": "23位"
+      },
+      "answer": [
+        "C"
+      ],
+      "answer_count": 1,
+      "explanation": "双精度：符号1位、阶码11位、尾数52位。"
+    },
+    {
+      "id": 24,
+      "source_id": 24,
+      "question_type": "单选题",
+      "stem": "软件生命周期中主要回答“做什么”的阶段是？",
+      "options": {
+        "A": "可行性研究",
+        "B": "需求分析",
+        "C": "编码",
+        "D": "维护"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "需求分析→做啥。"
+    },
+    {
+      "id": 25,
+      "source_id": 25,
+      "question_type": "多选题",
+      "stem": "关于软件生存期模型，下列说法正确的有？",
+      "options": {
+        "A": "瀑布模型是线性顺序模型",
+        "B": "增量模型可分批迭代交付",
+        "C": "螺旋模型强调风险分析",
+        "D": "喷泉模型专为面向过程开发设计"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "喷泉模型专为面向对象开发设计。"
+    },
+    {
+      "id": 26,
+      "source_id": 26,
+      "question_type": "多选题",
+      "stem": "关于ARPANET，下列说法正确的有？",
+      "options": {
+        "A": "建立于1969年",
+        "B": "由美国国防部建立",
+        "C": "是第一个计算机网络",
+        "D": "又称以太网"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "ARPANET又称“阿帕网”，不是以太网。"
+    },
+    {
+      "id": 27,
+      "source_id": 27,
+      "question_type": "多选题",
+      "stem": "计算机网络定义中包含的要点有？",
+      "options": {
+        "A": "多台计算机具有独立功能",
+        "B": "通过通信线路和通信设备连接",
+        "C": "由网络操作系统和网络协议管理",
+        "D": "目标包括资源共享和数据传输"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四项均属于原定义。"
+    },
+    {
+      "id": 28,
+      "source_id": 28,
+      "question_type": "多选题",
+      "stem": "网络协议的组成要素包括？",
+      "options": {
+        "A": "语法",
+        "B": "语义",
+        "C": "同步",
+        "D": "带宽"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "协议三要素→语法、语义、同步。"
+    },
+    {
+      "id": 29,
+      "source_id": 29,
+      "question_type": "多选题",
+      "stem": "关于数据校验，下列说法正确的有？",
+      "options": {
+        "A": "CRC属于检错码",
+        "B": "水平或垂直奇偶校验可用于检错",
+        "C": "水平垂直奇偶校验码属于纠错码",
+        "D": "奇校验要求1的个数为偶数"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "奇校验要求1的个数为奇数。"
+    },
+    {
+      "id": 30,
+      "source_id": 30,
+      "question_type": "多选题",
+      "stem": "计算机网络的功能包括？",
+      "options": {
+        "A": "数据通信",
+        "B": "资源共享",
+        "C": "负载均衡",
+        "D": "分布式处理"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四项均为计算机网络功能。"
+    },
+    {
+      "id": 31,
+      "source_id": 31,
+      "question_type": "多选题",
+      "stem": "关于硬件地址，下列说法正确的有？",
+      "options": {
+        "A": "长度为48位",
+        "B": "固化在网卡ROM芯片中",
+        "C": "用户可随意修改",
+        "D": "属于网卡的地址"
+      },
+      "answer": [
+        "A",
+        "B",
+        "D"
+      ],
+      "answer_count": 3,
+      "explanation": "原文指出计算机用户不能修改该地址。"
+    },
+    {
+      "id": 32,
+      "source_id": 32,
+      "question_type": "多选题",
+      "stem": "下列IPv4地址形式中，计算机不能直接使用的有？",
+      "options": {
+        "A": "主机号全为0",
+        "B": "主机号全为1",
+        "C": "127开头的地址",
+        "D": "C类地址"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "C类地址本身并非不能使用。"
+    },
+    {
+      "id": 33,
+      "source_id": 33,
+      "question_type": "多选题",
+      "stem": "关于IPv6，下列说法正确的有？",
+      "options": {
+        "A": "地址长度为128位",
+        "B": "用于解决IP地址紧缺问题",
+        "C": "采用32位地址",
+        "D": "地址长度与IPv4相同"
+      },
+      "answer": [
+        "A",
+        "B"
+      ],
+      "answer_count": 2,
+      "explanation": "IPv6为128位，IPv4为32位。"
+    },
+    {
+      "id": 34,
+      "source_id": 34,
+      "question_type": "多选题",
+      "stem": "关于子网掩码，下列说法正确的有？",
+      "options": {
+        "A": "1表示网络位",
+        "B": "0表示主机位",
+        "C": "必须结合IP地址使用",
+        "D": "C类默认掩码为255.255.255.0"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四项均符合第34条。"
+    },
+    {
+      "id": 35,
+      "source_id": 35,
+      "question_type": "多选题",
+      "stem": "子网划分中，下列公式正确的有？",
+      "options": {
+        "A": "子网个数＝2的借位数次方",
+        "B": "主机数＝2的主机位次方－2",
+        "C": "子网个数＝借位数×2",
+        "D": "主机数＝2的主机位次方"
+      },
+      "answer": [
+        "A",
+        "B"
+      ],
+      "answer_count": 2,
+      "explanation": "子网数看借位数；可用主机数需减2。"
+    },
+    {
+      "id": 36,
+      "source_id": 36,
+      "question_type": "多选题",
+      "stem": "关于网络性能指标，下列说法正确的有？",
+      "options": {
+        "A": "速率单位可用b/s",
+        "B": "频带带宽可表示最高频率与最低频率之差",
+        "C": "最高数据率的单位可用比特每秒",
+        "D": "带宽只能用Hz表示"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "带宽还可指最高数据率。"
+    },
+    {
+      "id": 37,
+      "source_id": 37,
+      "question_type": "多选题",
+      "stem": "关于网络分类，下列说法正确的有？",
+      "options": {
+        "A": "LAN是局域网",
+        "B": "MAN是城域网",
+        "C": "WAN是广域网",
+        "D": "Internet可作为广域网的例子"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四项均为第37条对应关系。"
+    },
+    {
+      "id": 38,
+      "source_id": 38,
+      "question_type": "多选题",
+      "stem": "关于有线传输介质，下列说法正确的有？",
+      "options": {
+        "A": "粗同轴电缆典型距离为500m",
+        "B": "双绞线典型距离为100m",
+        "C": "单模光纤适合长距离骨干通信",
+        "D": "双绞线相互绞合是为增强信号干扰"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "双绞线绞合是为降低信号间干扰。"
+    },
+    {
+      "id": 39,
+      "source_id": 39,
+      "question_type": "多选题",
+      "stem": "无线传输介质包括？",
+      "options": {
+        "A": "无线电波",
+        "B": "微波",
+        "C": "红外线",
+        "D": "双绞线"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "双绞线属于有线传输介质。"
+    },
+    {
+      "id": 40,
+      "source_id": 40,
+      "question_type": "多选题",
+      "stem": "下列网络设备与作用对应正确的有？",
+      "options": {
+        "A": "中继器—信号放大与再生",
+        "B": "集线器—多端口中继器",
+        "C": "交换机—多端口网桥",
+        "D": "路由器—路由选择"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四组对应均来自第40条。"
+    },
+    {
+      "id": 41,
+      "source_id": 41,
+      "question_type": "多选题",
+      "stem": "关于协议三要素，下列对应正确的有？",
+      "options": {
+        "A": "语法—信息结构和格式",
+        "B": "语义—信息含义及动作响应",
+        "C": "同步—事件时序和速度匹配",
+        "D": "语义—什么时候说"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "“什么时候说”对应同步。"
+    },
+    {
+      "id": 42,
+      "source_id": 42,
+      "question_type": "多选题",
+      "stem": "下列协议与功能对应正确的有？",
+      "options": {
+        "A": "ARP—IP地址解析为MAC地址",
+        "B": "DNS—域名解析为IP地址",
+        "C": "DHCP—自动分配网络配置信息",
+        "D": "SMTP—发送电子邮件"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四组对应均来自常见协议表。"
+    },
+    {
+      "id": 43,
+      "source_id": 43,
+      "question_type": "多选题",
+      "stem": "下列顶级域名与含义对应正确的有？",
+      "options": {
+        "A": "com—商业组织",
+        "B": "edu—学校教育",
+        "C": "gov—政府部门",
+        "D": "org—非盈利组织"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四组对应均来自域名表。"
+    },
+    {
+      "id": 44,
+      "source_id": 44,
+      "question_type": "多选题",
+      "stem": "关于WWW，下列说法正确的有？",
+      "options": {
+        "A": "WWW以客户服务器方式工作",
+        "B": "HTML用于编写网页",
+        "C": "URL是统一资源定位器",
+        "D": "HTTPS可表述为HTTP+SSL"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四项均来自第44条。"
+    },
+    {
+      "id": 45,
+      "source_id": 45,
+      "question_type": "多选题",
+      "stem": "关于电子邮件地址，下列说法正确的有？",
+      "options": {
+        "A": "基本格式为用户名@域名",
+        "B": "用户名一般可由数字、字母、下划线组成",
+        "C": "域名是ISP电子邮件服务器的域名",
+        "D": "基本格式为域名@用户名"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "电子邮件地址顺序是用户名@域名。"
+    },
+    {
+      "id": 46,
+      "source_id": 46,
+      "question_type": "多选题",
+      "stem": "OSI参考模型中，下列数据名称与层次对应正确的有？",
+      "options": {
+        "A": "传输层—数据段",
+        "B": "网络层—数据报",
+        "C": "数据链路层—数据帧",
+        "D": "物理层—比特"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四组对应均来自模型表。"
+    },
+    {
+      "id": 47,
+      "source_id": 47,
+      "question_type": "多选题",
+      "stem": "下列属于主动攻击的有？",
+      "options": {
+        "A": "拒绝服务攻击",
+        "B": "分布式拒绝服务攻击",
+        "C": "篡改或重放",
+        "D": "窃听"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answer_count": 3,
+      "explanation": "窃听属于被动攻击。"
+    },
+    {
+      "id": 48,
+      "source_id": 48,
+      "question_type": "多选题",
+      "stem": "信息安全的属性包括？",
+      "options": {
+        "A": "完整性",
+        "B": "保密性",
+        "C": "可用性",
+        "D": "不可否认性"
+      },
+      "answer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "answer_count": 4,
+      "explanation": "四项均属于第48条列出的属性。"
+    },
+    {
+      "id": 49,
+      "source_id": 49,
+      "question_type": "判断题",
+      "stem": "木马会像蠕虫一样自我复制。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "木马不会自我复制；蠕虫会。"
+    },
+    {
+      "id": 50,
+      "source_id": 50,
+      "question_type": "判断题",
+      "stem": "防火墙能够防范所有计算机病毒。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "防火墙不防病毒。"
+    },
+    {
+      "id": 51,
+      "source_id": 51,
+      "question_type": "判断题",
+      "stem": "传输数据时可用公钥加密、私钥解密。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "传输数据→公钥加密、私钥解密。"
+    },
+    {
+      "id": 52,
+      "source_id": 52,
+      "question_type": "判断题",
+      "stem": "数字签名是非对称密钥加密技术与消息摘要技术的应用。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "与第52条定义一致。"
+    },
+    {
+      "id": 53,
+      "source_id": 53,
+      "question_type": "判断题",
+      "stem": "数字证书可用于验证人员或计算机的身份及公开密钥。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "数字证书用于验证身份及公开密钥。"
+    },
+    {
+      "id": 54,
+      "source_id": 54,
+      "question_type": "判断题",
+      "stem": "SaaS是租用基于Web的软件。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "SaaS→软件即服务。"
+    },
+    {
+      "id": 55,
+      "source_id": 55,
+      "question_type": "判断题",
+      "stem": "物联网的核心和基础是互联网。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "与第55条原文一致。"
+    },
+    {
+      "id": 56,
+      "source_id": 56,
+      "question_type": "判断题",
+      "stem": "数据量大是大数据最显著的特征。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "4V中数据量大最显著。"
+    },
+    {
+      "id": 57,
+      "source_id": 57,
+      "question_type": "判断题",
+      "stem": "通过图灵测试的计算机一定真正具有人工智能。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "通过图灵测试不一定真正具有人工智能。"
+    },
+    {
+      "id": 58,
+      "source_id": 1,
+      "question_type": "判断题",
+      "stem": "ENIAC于1969年诞生。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "1969年→1946年。"
+    },
+    {
+      "id": 59,
+      "source_id": 2,
+      "question_type": "判断题",
+      "stem": "第二代计算机采用晶体管作为主要电子元器件。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "第二代→晶体管。"
+    },
+    {
+      "id": 60,
+      "source_id": 3,
+      "question_type": "判断题",
+      "stem": "网络化不属于计算机的发展趋势。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "网络化属于发展趋势。"
+    },
+    {
+      "id": 61,
+      "source_id": 4,
+      "question_type": "判断题",
+      "stem": "过程控制是计算机在工业自动化方面的应用。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "过程控制→工业自动化。"
+    },
+    {
+      "id": 62,
+      "source_id": 5,
+      "question_type": "判断题",
+      "stem": "按数据处理方式可分为数字式、模拟式和数字模拟混合式计算机。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "与第5条分类一致。"
+    },
+    {
+      "id": 63,
+      "source_id": 6,
+      "question_type": "判断题",
+      "stem": "冯·诺依曼理论主张采用二进制进行数据的存储和传输。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "与第6条原文一致。"
+    },
+    {
+      "id": 64,
+      "source_id": 7,
+      "question_type": "判断题",
+      "stem": "其他指标相同时，主频越高，计算机运算速度通常越快。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "主频越高→运算速度越快。"
+    },
+    {
+      "id": 65,
+      "source_id": 8,
+      "question_type": "判断题",
+      "stem": "ROM中的内容会因断电而丢失。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "ROM断电后内容不丢失。"
+    },
+    {
+      "id": 66,
+      "source_id": 9,
+      "question_type": "判断题",
+      "stem": "在多级存储层次中，从上到下容量增大、存取速度降低。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "与第9条变化规律一致。"
+    },
+    {
+      "id": 67,
+      "source_id": 10,
+      "question_type": "判断题",
+      "stem": "数据总线通常是单向传输的。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "数据总线双向；地址总线单向。"
+    },
+    {
+      "id": 68,
+      "source_id": 11,
+      "question_type": "判断题",
+      "stem": "机械硬盘不需要防震动。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "机械硬盘磁头与盘面距离很近，需要防震动。"
+    },
+    {
+      "id": 69,
+      "source_id": 12,
+      "question_type": "判断题",
+      "stem": "激光打印机属于击打式打印机。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "激光打印机属于非击打式打印机。"
+    },
+    {
+      "id": 70,
+      "source_id": 13,
+      "question_type": "判断题",
+      "stem": "八进制数码的取值范围是0～8。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "八进制数码范围为0～7。"
+    },
+    {
+      "id": 71,
+      "source_id": 14,
+      "question_type": "判断题",
+      "stem": "十进制小数转换为N进制小数可采用乘N取整法。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "A"
+      ],
+      "answer_count": 1,
+      "explanation": "小数部分→乘N取整。"
+    },
+    {
+      "id": 72,
+      "source_id": 15,
+      "question_type": "判断题",
+      "stem": "1KB等于1000B。",
+      "options": {
+        "A": "正确",
+        "B": "错误"
+      },
+      "answer": [
+        "B"
+      ],
+      "answer_count": 1,
+      "explanation": "1KB＝1024B。"
+    }
+  ]
+}

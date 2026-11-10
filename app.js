@@ -1,8 +1,10 @@
 const DATA_URL = './data/questions.json';
 const COMPUTER_BASICS_URL = './data/computer-basics.json';
+const COMPUTER_QUIZ_URL = './data/computer-quiz.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
 const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
 const PRACTICE_CATEGORY_ORDER = ['单选题', '多选题', '判断题'];
+const COMPUTER_QUIZ_TYPES = ['全部题型', '单选题', '多选题', '判断题'];
 const REVIEW_CATEGORY_DESCRIPTIONS = {
   '单选': '每题选择一个正确答案',
   '多选两选': '每题有两个正确答案',
@@ -29,6 +31,7 @@ const toast = document.querySelector('#toast');
 let questions = [];
 let metadata = {};
 let computerBasics = [];
+let computerQuizQuestions = [];
 let progress = loadProgress();
 let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
 let lastSwipeAt = 0;
@@ -118,7 +121,7 @@ function renderHome() {
       </button>
       <button class="mode-card" id="computerBasics">
         <span class="mode-icon">机</span><h3>计算机基础57条</h3>
-        <p>每次查看一条知识点，左滑下一条、右滑上一条，适合碎片时间快速记忆。</p>
+        <p>分为知识点学习和随机测试：按钮逐条学习，再用单选、多选、判断检验掌握情况。</p>
       </button>
     </section>
     <div class="section-title"><div><h2>快速入口</h2><p>按错误频率优先</p></div></div>
@@ -127,8 +130,44 @@ function renderHome() {
     </section>`;
   app.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => renderCategories(button.dataset.mode)));
   app.querySelector('#randomQuiz')?.addEventListener('click', renderRandomSetup);
-  app.querySelector('#computerBasics')?.addEventListener('click', () => renderKnowledgePoint(0));
+  app.querySelector('#computerBasics')?.addEventListener('click', renderComputerHub);
   app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
+}
+
+function getComputerRecord(id) {
+  if (!progress.computerQuestions) progress.computerQuestions = {};
+  const key = String(id);
+  if (!progress.computerQuestions[key]) {
+    progress.computerQuestions[key] = { attempts: 0, correct: 0, wrong: 0, recent: [], lastAnswered: null, lastResult: null };
+  }
+  return progress.computerQuestions[key];
+}
+
+function computerQuizSummary() {
+  const records = Object.values(progress.computerQuestions || {});
+  const attempts = records.reduce((sum, item) => sum + (item.attempts || 0), 0);
+  const correct = records.reduce((sum, item) => sum + (item.correct || 0), 0);
+  return { attempts, correct, accuracy: attempts ? Math.round(correct / attempts * 100) : 0 };
+}
+
+function renderComputerHub() {
+  view = { ...view, screen: 'computerHub', selected: new Set(), answered: false };
+  setHeader(true);
+  const summary = computerQuizSummary();
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">计算机基础专项</p><h1>先逐条学习，再随机检验</h1><p>学习模块完整呈现57条原文；测试模块只依据这57条组题，每道题均标注对应知识点。</p></section>
+    <section class="mode-grid computer-mode-grid">
+      <button class="mode-card" id="computerStudy">
+        <span class="mode-icon">学</span><h3>知识点学习</h3>
+        <p>一次查看一条，使用“上一条／下一条”按钮切换，共57条。</p>
+      </button>
+      <button class="mode-card" id="computerTest">
+        <span class="mode-icon">测</span><h3>随机测试</h3>
+        <p>单选、多选、判断共${computerQuizQuestions.length}题；已答${summary.attempts}次，正确率${summary.accuracy}%。</p>
+      </button>
+    </section>`;
+  app.querySelector('#computerStudy').addEventListener('click', () => renderKnowledgePoint(0));
+  app.querySelector('#computerTest').addEventListener('click', renderComputerQuizSetup);
 }
 
 function renderKnowledgeInline(text = '') {
@@ -194,12 +233,16 @@ function renderKnowledgePoint(index = 0) {
       <div class="toolbar-left"><span class="pill">计算机基础57条</span><span class="pill">${safeIndex + 1}/${computerBasics.length}</span></div>
     </div>
     <article class="question-card knowledge-card">
-      <div class="question-head"><span class="question-number">第 ${point.id} 条</span><span class="difficulty">左右滑动切换</span></div>
+      <div class="question-head"><span class="question-number">第 ${point.id} 条</span><span class="difficulty">逐条学习</span></div>
       <h2>${escapeHtml(point.title)}</h2>
       <div class="knowledge-content">${renderKnowledgeContent(point.content)}</div>
-      <p class="gesture-hint">左滑下一条 · 右滑上一条</p>
+      <div class="knowledge-nav">
+        <button id="previousKnowledge" class="button button-secondary" ${safeIndex === 0 ? 'disabled' : ''}>上一条</button>
+        <button id="nextKnowledge" class="button button-primary" ${safeIndex === computerBasics.length - 1 ? 'disabled' : ''}>下一条</button>
+      </div>
     </article>`;
-  bindSwipeNavigation(app.querySelector('.knowledge-card'), nextKnowledgePoint, previousKnowledgePoint);
+  app.querySelector('#previousKnowledge').addEventListener('click', previousKnowledgePoint);
+  app.querySelector('#nextKnowledge').addEventListener('click', nextKnowledgePoint);
 }
 
 function nextKnowledgePoint() {
@@ -218,6 +261,178 @@ function previousKnowledgePoint() {
   }
   renderKnowledgePoint(view.knowledgeIndex - 1);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function getComputerQuizPool(type) {
+  return type === '全部题型' ? [...computerQuizQuestions] : computerQuizQuestions.filter(question => question.question_type === type);
+}
+
+function renderComputerQuizSetup() {
+  const selectedType = view.computerQuizType || '全部题型';
+  const selectedCount = view.computerQuizCount || 10;
+  view = { ...view, screen: 'computerQuizSetup', computerQuizType: selectedType, computerQuizCount: selectedCount, selected: new Set(), answered: false, computerSessionResults: {} };
+  setHeader(true);
+  const typeOptions = COMPUTER_QUIZ_TYPES.map(type => `<option value="${type}" ${type === selectedType ? 'selected' : ''}>${type}</option>`).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">计算机基础 · 随机测试</p><h1>从57条知识点中随机组题</h1><p>题库共${computerQuizQuestions.length}题，单选、多选、判断各24题。所有题目与答案仅依据57条原文。</p></section>
+    <section class="panel random-panel">
+      <label class="field-label" for="computerQuizType">题型范围</label>
+      <select id="computerQuizType" class="select random-select">${typeOptions}</select>
+      <label class="field-label" for="computerQuizCount">题目数量</label>
+      <div class="random-controls">
+        <input id="computerQuizCount" class="number-input" type="number" min="1" inputmode="numeric" value="${selectedCount}">
+        <button id="startComputerQuiz" class="button button-primary">开始测试</button>
+      </div>
+      <div class="preset-grid" aria-label="常用题数">
+        ${[5, 10, 20].map(count => `<button class="preset-button" data-computer-count="${count}">${count}题</button>`).join('')}
+      </div>
+      <p id="computerQuizLimit" class="random-note"></p>
+      <p class="scope-note">答题后显示对应知识点编号和简要依据；每组题目不重复。</p>
+    </section>`;
+  const typeSelect = app.querySelector('#computerQuizType');
+  const countInput = app.querySelector('#computerQuizCount');
+  const limitText = app.querySelector('#computerQuizLimit');
+  const updateLimit = () => {
+    const poolSize = getComputerQuizPool(typeSelect.value).length;
+    countInput.max = poolSize;
+    if (Number(countInput.value) > poolSize) countInput.value = poolSize;
+    limitText.textContent = `${typeSelect.value}可抽取 ${poolSize} 题。`;
+  };
+  typeSelect.addEventListener('change', updateLimit);
+  app.querySelectorAll('[data-computer-count]').forEach(button => button.addEventListener('click', () => {
+    countInput.value = Math.min(Number(button.dataset.computerCount), getComputerQuizPool(typeSelect.value).length);
+  }));
+  app.querySelector('#startComputerQuiz').addEventListener('click', () => startComputerQuiz(typeSelect.value, Number(countInput.value)));
+  updateLimit();
+}
+
+function startComputerQuiz(type, requestedCount) {
+  const pool = getComputerQuizPool(type);
+  if (!Number.isInteger(requestedCount) || requestedCount < 1) {
+    showToast('请输入不少于1的整数题数');
+    return;
+  }
+  if (requestedCount > pool.length) {
+    showToast(`${type}最多可抽取${pool.length}题`);
+    return;
+  }
+  view = {
+    ...view,
+    screen: 'computerQuizQuestion',
+    origin: 'computerQuiz',
+    computerQuizType: type,
+    computerQuizCount: requestedCount,
+    computerSession: shuffleQuestions(pool).slice(0, requestedCount),
+    computerSessionResults: {},
+    index: 0,
+    selected: new Set(),
+    answered: false,
+    correct: false,
+  };
+  setHeader(true);
+  renderComputerQuestion();
+}
+
+function renderComputerQuestion() {
+  const question = view.computerSession?.[view.index];
+  if (!question) {
+    app.innerHTML = `<section class="panel empty">当前范围没有可用题目。</section>`;
+    return;
+  }
+  const record = getComputerRecord(question.id);
+  const options = Object.entries(question.options).map(([letter, text]) => {
+    const selected = view.selected.has(letter);
+    const correct = view.answered && question.answer.includes(letter);
+    const wrong = view.answered && selected && !question.answer.includes(letter);
+    return `<button class="option ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${wrong ? 'wrong' : ''}" data-computer-option="${letter}" ${view.answered ? 'disabled' : ''}>
+      <span class="option-letter">${letter}</span><span>${escapeHtml(text)}</span>
+    </button>`;
+  }).join('');
+  const source = computerBasics.find(item => item.id === question.source_id);
+  const statsText = record.attempts ? `已答${record.attempts}次 · 对${record.correct} · 错${record.wrong}` : '尚未作答';
+  const answerBox = view.answered ? `<div class="answer-box">
+    <strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · 正确答案：${question.answer.join('、')}</strong>
+    <p>${escapeHtml(question.explanation)}</p>
+    <p class="question-source">依据：第${question.source_id}条${source ? `「${escapeHtml(source.title)}」` : ''}</p>
+  </div>` : '';
+  const needsSubmit = question.answer_count > 1 && !view.answered;
+  const isLast = view.index === view.computerSession.length - 1;
+  app.innerHTML = `
+    <div class="toolbar"><div class="toolbar-left"><span class="pill">计算机随机测试 · ${question.question_type}</span><span class="pill">${view.index + 1}/${view.computerSession.length}</span></div></div>
+    <article class="question-card">
+      <div class="question-head"><span class="question-number">第 ${view.index + 1} 题</span><span class="difficulty">${statsText}</span></div>
+      <p class="stem">${escapeHtml(question.stem)}</p>
+      <div class="options">${options}</div>
+      ${answerBox}
+      ${needsSubmit ? `<div class="actions single-action"><button id="submitComputerAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>提交答案</button></div>` : ''}
+      ${view.answered ? `<div class="actions single-action"><button id="nextComputerQuestion" class="button button-primary">${isLast ? '查看本组结果' : '下一题'}</button></div>` : ''}
+      <p class="gesture-hint">${question.answer_count === 1 ? '点击选项立即提交' : '选择所有答案后提交'}</p>
+    </article>`;
+  app.querySelectorAll('[data-computer-option]').forEach(button => button.addEventListener('click', () => toggleComputerOption(button.dataset.computerOption)));
+  app.querySelector('#submitComputerAnswer')?.addEventListener('click', submitComputerAnswer);
+  app.querySelector('#nextComputerQuestion')?.addEventListener('click', nextComputerQuestion);
+}
+
+function toggleComputerOption(letter) {
+  if (view.answered) return;
+  const question = view.computerSession[view.index];
+  if (question.answer_count === 1) {
+    view.selected = new Set([letter]);
+    submitComputerAnswer();
+    return;
+  }
+  if (view.selected.has(letter)) view.selected.delete(letter);
+  else view.selected.add(letter);
+  renderComputerQuestion();
+}
+
+function submitComputerAnswer() {
+  if (view.answered || !view.selected.size) return;
+  const question = view.computerSession[view.index];
+  const chosen = [...view.selected].sort();
+  const answer = [...question.answer].sort();
+  const correct = chosen.length === answer.length && chosen.every((letter, index) => letter === answer[index]);
+  const record = getComputerRecord(question.id);
+  record.attempts += 1;
+  record.correct += correct ? 1 : 0;
+  record.wrong += correct ? 0 : 1;
+  record.lastAnswered = new Date().toISOString();
+  record.lastResult = correct;
+  record.recent = [...(record.recent || []), correct].slice(-10);
+  view.computerSessionResults[String(question.id)] = correct;
+  view.answered = true;
+  view.correct = correct;
+  saveProgress();
+  renderComputerQuestion();
+}
+
+function nextComputerQuestion() {
+  if (view.index >= view.computerSession.length - 1) {
+    renderComputerQuizComplete();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  view.index += 1;
+  view.selected = new Set();
+  view.answered = false;
+  view.correct = false;
+  renderComputerQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderComputerQuizComplete() {
+  view.screen = 'computerQuizComplete';
+  setHeader(true);
+  const results = Object.values(view.computerSessionResults || {});
+  const correct = results.filter(Boolean).length;
+  const wrong = results.length - correct;
+  const accuracy = results.length ? Math.round(correct / results.length * 100) : 0;
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">计算机基础 · 本组完成</p><h1>${correct}/${results.length} 题正确</h1><p>正确率${accuracy}%。作答记录已保存在当前浏览器，可继续按相同设置随机生成新题组。</p></section>
+    <section class="summary-grid"><article class="summary-card"><strong>${view.computerSession.length}</strong><span>本组题数</span></article><article class="summary-card"><strong>${correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${wrong}</strong><span>回答错误</span></article></section>
+    <section class="panel"><div class="actions"><button id="computerQuizSettings" class="button button-secondary">修改设置</button><button id="computerQuizAgain" class="button button-primary">同样设置再来一组</button></div></section>`;
+  app.querySelector('#computerQuizSettings').addEventListener('click', renderComputerQuizSetup);
+  app.querySelector('#computerQuizAgain').addEventListener('click', () => startComputerQuiz(view.computerQuizType, view.computerQuizCount));
 }
 
 function renderCategories(mode) {
@@ -541,6 +756,8 @@ function goBack() {
   if (view.screen === 'question' && view.origin === 'random') renderRandomSetup();
   else if (view.screen === 'question') renderCategories(view.mode);
   else if (view.screen === 'randomComplete') renderRandomSetup();
+  else if (view.screen === 'knowledge' || view.screen === 'computerQuizSetup') renderComputerHub();
+  else if (view.screen === 'computerQuizQuestion' || view.screen === 'computerQuizComplete') renderComputerQuizSetup();
   else renderHome();
 }
 
@@ -552,13 +769,15 @@ dataButton.addEventListener('click', showDataDialog);
 
 async function init() {
   try {
-    const [questionResponse, basicsResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL)]);
+    const [questionResponse, basicsResponse, computerQuizResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL)]);
     if (!questionResponse.ok) throw new Error(`题库 HTTP ${questionResponse.status}`);
     if (!basicsResponse.ok) throw new Error(`计算机基础 HTTP ${basicsResponse.status}`);
-    const [questionPayload, basicsPayload] = await Promise.all([questionResponse.json(), basicsResponse.json()]);
+    if (!computerQuizResponse.ok) throw new Error(`计算机测试题库 HTTP ${computerQuizResponse.status}`);
+    const [questionPayload, basicsPayload, computerQuizPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json()]);
     questions = questionPayload.questions;
     metadata = questionPayload.metadata;
     computerBasics = basicsPayload.items;
+    computerQuizQuestions = computerQuizPayload.questions;
     renderHome();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   } catch (error) {

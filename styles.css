@@ -120,6 +120,9 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .knowledge-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; line-height: 1.45; }
 .knowledge-table th, .knowledge-table td { padding: 8px 7px; border: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .knowledge-table th { background: var(--surface-soft); color: var(--primary-dark); }
+.knowledge-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+.question-source { margin-top: 8px !important; color: var(--muted); font-size: 12px; }
+.scope-note { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }
 .button { min-height: 46px; border: 0; border-radius: 14px; padding: 11px 16px; font-weight: 800; }
 .button-primary { color: white; background: var(--primary); }
 .button-primary:hover { background: var(--primary-dark); }
