@@ -1,4 +1,5 @@
 const DATA_URL = './data/questions.json';
+const COMPUTER_BASICS_URL = './data/computer-basics.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
 const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
 const PRACTICE_CATEGORY_ORDER = ['单选题', '多选题', '判断题'];
@@ -27,6 +28,7 @@ const toast = document.querySelector('#toast');
 
 let questions = [];
 let metadata = {};
+let computerBasics = [];
 let progress = loadProgress();
 let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
 let lastSwipeAt = 0;
@@ -114,6 +116,10 @@ function renderHome() {
         <span class="mode-icon">随</span><h3>随机刷题</h3>
         <p>设置题库范围和题目数量，无重复随机抽题，完成后查看本组正确率。</p>
       </button>
+      <button class="mode-card" id="computerBasics">
+        <span class="mode-icon">机</span><h3>计算机基础57条</h3>
+        <p>每次查看一条知识点，左滑下一条、右滑上一条，适合碎片时间快速记忆。</p>
+      </button>
     </section>
     <div class="section-title"><div><h2>快速入口</h2><p>按错误频率优先</p></div></div>
     <section class="panel">
@@ -121,7 +127,97 @@ function renderHome() {
     </section>`;
   app.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => renderCategories(button.dataset.mode)));
   app.querySelector('#randomQuiz')?.addEventListener('click', renderRandomSetup);
+  app.querySelector('#computerBasics')?.addEventListener('click', () => renderKnowledgePoint(0));
   app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
+}
+
+function renderKnowledgeInline(text = '') {
+  return escapeHtml(text)
+    .replace(/\\([*._])/g, '$1')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function parseTableRow(line) {
+  return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
+}
+
+function isTableSeparator(line = '') {
+  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function renderKnowledgeContent(markdown = '') {
+  const lines = markdown.replace(/\r/g, '').split('\n');
+  const output = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    if (line.startsWith('|') && isTableSeparator(lines[index + 1])) {
+      const headers = parseTableRow(line);
+      const rows = [];
+      index += 2;
+      while (index < lines.length && lines[index].trim().startsWith('|')) {
+        rows.push(parseTableRow(lines[index]));
+        index += 1;
+      }
+      index -= 1;
+      output.push(`<div class="knowledge-table-wrap"><table class="knowledge-table"><thead><tr>${headers.map(cell => `<th>${renderKnowledgeInline(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${headers.map((_, cellIndex) => `<td>${renderKnowledgeInline(row[cellIndex] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    if (/^[-*]\s+/.test(line)) {
+      const items = [];
+      let cursor = index;
+      while (cursor < lines.length && /^\s*[-*]\s+/.test(lines[cursor])) {
+        items.push(lines[cursor].replace(/^\s*[-*]\s+/, ''));
+        cursor += 1;
+      }
+      output.push(`<ul>${items.map(item => `<li>${renderKnowledgeInline(item)}</li>`).join('')}</ul>`);
+      index = cursor - 1;
+      continue;
+    }
+    output.push(`<p>${renderKnowledgeInline(line)}</p>`);
+  }
+  return output.join('');
+}
+
+function renderKnowledgePoint(index = 0) {
+  if (!computerBasics.length) {
+    app.innerHTML = `<section class="panel empty">计算机基础知识点尚未载入。</section>`;
+    return;
+  }
+  const safeIndex = Math.max(0, Math.min(index, computerBasics.length - 1));
+  const point = computerBasics[safeIndex];
+  view = { ...view, screen: 'knowledge', knowledgeIndex: safeIndex };
+  setHeader(true);
+  app.innerHTML = `
+    <div class="toolbar">
+      <div class="toolbar-left"><span class="pill">计算机基础57条</span><span class="pill">${safeIndex + 1}/${computerBasics.length}</span></div>
+    </div>
+    <article class="question-card knowledge-card">
+      <div class="question-head"><span class="question-number">第 ${point.id} 条</span><span class="difficulty">左右滑动切换</span></div>
+      <h2>${escapeHtml(point.title)}</h2>
+      <div class="knowledge-content">${renderKnowledgeContent(point.content)}</div>
+      <p class="gesture-hint">左滑下一条 · 右滑上一条</p>
+    </article>`;
+  bindSwipeNavigation(app.querySelector('.knowledge-card'), nextKnowledgePoint, previousKnowledgePoint);
+}
+
+function nextKnowledgePoint() {
+  if (view.knowledgeIndex >= computerBasics.length - 1) {
+    showToast('已经是最后一条');
+    return;
+  }
+  renderKnowledgePoint(view.knowledgeIndex + 1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function previousKnowledgePoint() {
+  if (view.knowledgeIndex <= 0) {
+    showToast('已经是第一条');
+    return;
+  }
+  renderKnowledgePoint(view.knowledgeIndex - 1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderCategories(mode) {
@@ -360,7 +456,7 @@ function previousQuestion() {
   renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function bindSwipeNavigation(element) {
+function bindSwipeNavigation(element, onNext = nextQuestion, onPrevious = previousQuestion) {
   if (!element) return;
   let start = null;
   element.addEventListener('pointerdown', event => {
@@ -374,8 +470,8 @@ function bindSwipeNavigation(element) {
     start = null;
     if (Math.abs(deltaX) < 55 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return;
     lastSwipeAt = Date.now();
-    if (deltaX < 0) nextQuestion();
-    else previousQuestion();
+    if (deltaX < 0) onNext();
+    else onPrevious();
   });
   element.addEventListener('pointercancel', () => { start = null; });
 }
@@ -456,15 +552,17 @@ dataButton.addEventListener('click', showDataDialog);
 
 async function init() {
   try {
-    const response = await fetch(DATA_URL);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    questions = payload.questions;
-    metadata = payload.metadata;
+    const [questionResponse, basicsResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL)]);
+    if (!questionResponse.ok) throw new Error(`题库 HTTP ${questionResponse.status}`);
+    if (!basicsResponse.ok) throw new Error(`计算机基础 HTTP ${basicsResponse.status}`);
+    const [questionPayload, basicsPayload] = await Promise.all([questionResponse.json(), basicsResponse.json()]);
+    questions = questionPayload.questions;
+    metadata = questionPayload.metadata;
+    computerBasics = basicsPayload.items;
     renderHome();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   } catch (error) {
-    app.innerHTML = `<section class="panel empty"><h2>题库载入失败</h2><p>${escapeHtml(error.message)}</p><button class="button button-primary" onclick="location.reload()">重新载入</button></section>`;
+    app.innerHTML = `<section class="panel empty"><h2>内容载入失败</h2><p>${escapeHtml(error.message)}</p><button class="button button-primary" onclick="location.reload()">重新载入</button></section>`;
   }
 }
 
