@@ -15,6 +15,7 @@ const PRACTICE_CATEGORY_DESCRIPTIONS = {
   '多选题': '混合两选、三选和全选题',
   '判断题': '正确题与错误题混合练习',
 };
+const HIDE_EXPLANATION_CATEGORIES = new Set(['判断对', '多选全选']);
 
 const app = document.querySelector('#app');
 const backButton = document.querySelector('#backButton');
@@ -267,6 +268,7 @@ function renderQuestion() {
   }
   const r = getRecord(q.question_no);
   const answerVisible = view.mode === 'review' || view.answered;
+  const explanationVisible = !HIDE_EXPLANATION_CATEGORIES.has(q.practice_category);
   const options = Object.entries(q.options).map(([letter, text]) => {
     const selected = view.selected.has(letter);
     const isCorrect = answerVisible && q.answer.includes(letter);
@@ -278,7 +280,7 @@ function renderQuestion() {
   const statsText = r.attempts ? `已答 ${r.attempts} 次 · 对 ${r.correct} · 错 ${r.wrong} · 正确率 ${Math.round(r.correct / r.attempts * 100)}%` : '尚未作答';
   const answerBox = answerVisible ? `<div class="answer-box">
     ${view.mode === 'practice' ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${q.answer.join('、')}</strong>
-    <p>${escapeHtml(q.explanation)}</p>
+    ${explanationVisible ? `<p>${escapeHtml(q.explanation)}</p>` : ''}
   </div>` : '';
   const needsSubmitButton = view.mode === 'practice' && q.answer_count > 1 && !view.answered;
   const gestureHint = view.mode === 'review'
