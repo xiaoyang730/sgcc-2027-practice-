@@ -33,7 +33,7 @@ let metadata = {};
 let computerBasics = [];
 let computerQuizQuestions = [];
 let progress = loadProgress();
-let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
+let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', randomScope: '全部题库', randomCount: 20, sessionResults: {} };
 let lastSwipeAt = 0;
 
 function loadProgress() {
@@ -52,9 +52,13 @@ function saveProgress() {
 function getRecord(id) {
   const key = String(id);
   if (!progress.questions[key]) {
-    progress.questions[key] = { attempts: 0, correct: 0, wrong: 0, views: 0, known: null, recent: [], lastAnswered: null, lastResult: null, lastViewed: null };
+    progress.questions[key] = { attempts: 0, correct: 0, wrong: 0, views: 0, known: null, favorite: false, customExplanation: null, note: '', recent: [], lastAnswered: null, lastResult: null, lastViewed: null };
   }
-  return progress.questions[key];
+  const record = progress.questions[key];
+  if (typeof record.favorite !== 'boolean') record.favorite = false;
+  if (!Object.prototype.hasOwnProperty.call(record, 'customExplanation')) record.customExplanation = null;
+  if (typeof record.note !== 'string') record.note = '';
+  return record;
 }
 
 function showToast(message) {
@@ -94,6 +98,7 @@ function renderHome() {
   setHeader(false);
   const s = summaryFor();
   const focus = questions.filter(q => getRecord(q.question_no).wrong > 0).length;
+  const favorites = questions.filter(q => getRecord(q.question_no).favorite).length;
   app.innerHTML = `
     <section class="hero">
       <p class="eyebrow">短期冲刺 · 记录保存在本机</p>
@@ -109,7 +114,7 @@ function renderHome() {
     <section class="mode-grid">
       <button class="mode-card" data-mode="review">
         <span class="mode-icon">阅</span><h3>背题模式</h3>
-        <p>题干、正确答案和解析同时显示，左右滑动即可快速切换题目。</p>
+        <p>按六类学习，进入题目后可切换显示答案的“背题”或先作答的“做题”。</p>
       </button>
       <button class="mode-card" data-mode="practice">
         <span class="mode-icon">练</span><h3>刷题模式</h3>
@@ -126,12 +131,17 @@ function renderHome() {
     </section>
     <div class="section-title"><div><h2>快速入口</h2><p>按错误频率优先</p></div></div>
     <section class="panel">
-      ${focus ? `<button id="focusPractice" class="button button-primary" style="width:100%">开始重点复习（${focus}题）</button>` : `<div class="empty">完成一些刷题后，这里会出现你的重点复习题。</div>`}
+      <div class="quick-actions">
+        ${focus ? `<button id="focusPractice" class="button button-primary">开始重点复习（${focus}题）</button>` : ''}
+        ${favorites ? `<button id="favoriteQuestions" class="button button-secondary">我的收藏（${favorites}题）</button>` : ''}
+      </div>
+      ${!focus && !favorites ? `<div class="empty">完成做题或收藏题目后，这里会出现快捷入口。</div>` : ''}
     </section>`;
   app.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => renderCategories(button.dataset.mode)));
   app.querySelector('#randomQuiz')?.addEventListener('click', renderRandomSetup);
   app.querySelector('#computerBasics')?.addEventListener('click', renderComputerHub);
   app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
+  app.querySelector('#favoriteQuestions')?.addEventListener('click', startFavoriteSession);
 }
 
 function getComputerRecord(id) {
@@ -454,7 +464,7 @@ function renderCategories(mode) {
     </button>`;
   }).join('');
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${isReview ? '答案和解析始终显示，按答案特征细分为六类。' : '按基础题型混合答案结构，不提前透露多选数量或判断正误。'}</p></section>
+    <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${isReview ? '按答案特征细分为六类；进入题目后可随时切换“背题”或“做题”。' : '按基础题型混合答案结构，不提前透露多选数量或判断正误。'}</p></section>
     <div class="section-title"><div><h2>${isReview ? '六类背题' : '三类刷题'}</h2><p>合计 ${questions.length} 题</p></div></div>
     <section class="category-grid">${cards}</section>`;
   app.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => startSession(mode, button.dataset.category)));
@@ -555,7 +565,15 @@ function buildSession(mode, category, order = 'smart') {
 }
 
 function startSession(mode, category, order = mode === 'practice' ? 'smart' : 'sequential') {
-  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, sessionResults: {} };
+  const reviewPresentation = mode === 'review' ? (view.reviewPresentation || 'study') : 'study';
+  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, reviewPresentation, sessionResults: {} };
+  setHeader(true);
+  renderQuestion();
+}
+
+function startFavoriteSession() {
+  const items = questions.filter(q => getRecord(q.question_no).favorite).sort((a, b) => a.question_no - b.question_no);
+  view = { screen: 'question', mode: 'review', category: '我的收藏', origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
@@ -567,19 +585,87 @@ function startFocusPractice() {
   renderQuestion();
 }
 
+function isQuestionPractice() {
+  return view.mode === 'practice' || (view.mode === 'review' && view.reviewPresentation === 'quiz');
+}
+
+function setReviewPresentation(presentation) {
+  if (view.mode !== 'review' || !['study', 'quiz'].includes(presentation)) return;
+  view.reviewPresentation = presentation;
+  view.selected = new Set();
+  view.answered = false;
+  view.correct = false;
+  renderQuestion();
+}
+
+function toggleFavorite() {
+  const question = view.session[view.index];
+  if (!question) return;
+  const record = getRecord(question.question_no);
+  record.favorite = !record.favorite;
+  saveProgress();
+  showToast(record.favorite ? '已加入收藏' : '已取消收藏');
+  renderQuestion();
+}
+
+function showQuestionEditor() {
+  const question = view.session[view.index];
+  if (!question) return;
+  const record = getRecord(question.question_no);
+  document.querySelector('#questionEditorDialog')?.remove();
+  const dialog = document.createElement('dialog');
+  dialog.id = 'questionEditorDialog';
+  dialog.innerHTML = `<form method="dialog" class="dialog-body question-editor">
+    <h2>第${question.question_no}题 · 个人解析与备注</h2>
+    <p>修改只保存在当前浏览器，不会更改官方题干、答案或网站原始题库。</p>
+    <label class="field-label" for="customExplanation">个人解析</label>
+    <textarea id="customExplanation" class="editor-textarea" rows="4" placeholder="可把原解析改成更适合自己的简短表述"></textarea>
+    <div class="editor-inline-actions"><button id="restoreExplanation" class="text-button" type="button">恢复原解析</button><span>留空也会恢复原解析</span></div>
+    <label class="field-label" for="questionNote">记忆备注／口诀</label>
+    <textarea id="questionNote" class="editor-textarea" rows="4" placeholder="例如：关键词、易错点、自己的记忆口诀"></textarea>
+    <div class="dialog-actions editor-actions"><button id="saveQuestionEditor" class="button button-primary" type="button">保存</button><button id="closeQuestionEditor" class="button button-secondary" type="button">取消</button></div>
+  </form>`;
+  document.body.appendChild(dialog);
+  const explanationInput = dialog.querySelector('#customExplanation');
+  const noteInput = dialog.querySelector('#questionNote');
+  explanationInput.value = record.customExplanation ?? question.explanation ?? '';
+  noteInput.value = record.note || '';
+  dialog.querySelector('#restoreExplanation').addEventListener('click', () => {
+    explanationInput.value = question.explanation || '';
+    showToast('已恢复原解析内容，保存后生效');
+  });
+  dialog.querySelector('#closeQuestionEditor').addEventListener('click', () => dialog.close());
+  dialog.querySelector('#saveQuestionEditor').addEventListener('click', () => {
+    const original = (question.explanation || '').trim();
+    const custom = explanationInput.value.trim();
+    record.customExplanation = custom && custom !== original ? custom : null;
+    record.note = noteInput.value.trim();
+    saveProgress();
+    dialog.close();
+    renderQuestion();
+    showToast('个人解析和备注已保存');
+  });
+  dialog.addEventListener('close', () => dialog.remove());
+  dialog.showModal();
+}
+
 function renderQuestion() {
   const q = view.session[view.index];
   if (!q) {
     app.innerHTML = `<section class="panel empty">当前分类没有题目。</section>`;
     return;
   }
-  if (view.mode === 'review') {
+  if (view.mode === 'review' && view.lastViewedQuestion !== q.question_no) {
     const r = getRecord(q.question_no);
     r.views += 1; r.lastViewed = new Date().toISOString(); saveProgress();
+    view.lastViewedQuestion = q.question_no;
   }
   const r = getRecord(q.question_no);
-  const answerVisible = view.mode === 'review' || view.answered;
-  const explanationVisible = Boolean(q.explanation?.trim()) && !HIDE_EXPLANATION_CATEGORIES.has(q.practice_category);
+  const practicePresentation = isQuestionPractice();
+  const answerVisible = !practicePresentation || view.answered;
+  const originalExplanation = !HIDE_EXPLANATION_CATEGORIES.has(q.practice_category) ? (q.explanation || '').trim() : '';
+  const displayExplanation = (r.customExplanation || '').trim() || originalExplanation;
+  const personalNote = (r.note || '').trim();
   const options = Object.entries(q.options).map(([letter, text]) => {
     const selected = view.selected.has(letter);
     const isCorrect = answerVisible && q.answer.includes(letter);
@@ -590,26 +676,30 @@ function renderQuestion() {
   }).join('');
   const statsText = r.attempts ? `已答 ${r.attempts} 次 · 对 ${r.correct} · 错 ${r.wrong} · 正确率 ${Math.round(r.correct / r.attempts * 100)}%` : '尚未作答';
   const answerBox = answerVisible ? `<div class="answer-box">
-    ${view.mode === 'practice' ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${q.answer.join('、')}</strong>
-    ${explanationVisible ? `<p>${escapeHtml(q.explanation)}</p>` : ''}
+    ${practicePresentation ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${q.answer.join('、')}</strong>
+    ${displayExplanation ? `<p><span class="answer-label">解析：</span>${escapeHtml(displayExplanation)}</p>` : ''}
+    ${personalNote ? `<div class="personal-note"><strong>我的备注／口诀</strong><p>${escapeHtml(personalNote).replace(/\n/g, '<br>')}</p></div>` : ''}
   </div>` : '';
-  const needsSubmitButton = view.mode === 'practice' && q.answer_count > 1 && !view.answered;
-  const gestureHint = view.mode === 'review'
+  const needsSubmitButton = practicePresentation && q.answer_count > 1 && !view.answered;
+  const gestureHint = !practicePresentation
     ? '左滑下一题 · 右滑上一题'
     : view.answered
       ? '已显示解析 · 左滑下一题 · 右滑上一题'
       : q.answer_count === 1
         ? '点击选项立即提交 · 左右滑动切题'
         : '选择所有答案后提交 · 左右滑动切题';
+  const modeLabel = view.mode === 'review' ? (view.reviewPresentation === 'quiz' ? '做题' : '背题') : '刷题';
   app.innerHTML = `
     <div class="toolbar">
-      <div class="toolbar-left"><span class="pill">${view.mode === 'review' ? '背题' : '刷题'} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span></div>
+      <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span></div>
       <div class="toolbar-right">
-        ${view.category !== '重点复习' && view.origin !== 'random' ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
+        ${view.mode === 'review' ? `<div class="presentation-toggle" aria-label="背题或做题"><button class="toggle-button ${view.reviewPresentation !== 'quiz' ? 'active' : ''}" data-review-presentation="study">背题</button><button class="toggle-button ${view.reviewPresentation === 'quiz' ? 'active' : ''}" data-review-presentation="quiz">做题</button></div>` : ''}
+        ${view.origin === 'category' ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
       </div>
     </div>
     <article class="question-card">
-      <div class="question-head"><span class="question-number">第 ${q.question_no} 题</span><span class="difficulty">${q.difficulty_source || '未标难度'} · ${statsText}</span></div>
+      <div class="question-head"><span class="question-number">第 ${q.question_no} 题</span><div class="question-tools"><button id="favoriteButton" class="mini-button ${r.favorite ? 'favorite-active' : ''}">${r.favorite ? '★ 已收藏' : '☆ 收藏'}</button><button id="editQuestion" class="mini-button">编辑解析／备注</button></div></div>
+      <p class="question-meta">${q.difficulty_source || '未标难度'} · ${statsText}</p>
       <p class="stem">${escapeHtml(q.stem)}</p>
       <div class="options">${options}</div>
       ${answerBox}
@@ -617,13 +707,16 @@ function renderQuestion() {
       <p class="gesture-hint">${gestureHint}</p>
     </article>`;
   app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => toggleOption(button.dataset.option)));
+  app.querySelectorAll('[data-review-presentation]').forEach(button => button.addEventListener('click', () => setReviewPresentation(button.dataset.reviewPresentation)));
   app.querySelector('#submitAnswer')?.addEventListener('click', submitAnswer);
+  app.querySelector('#favoriteButton').addEventListener('click', toggleFavorite);
+  app.querySelector('#editQuestion').addEventListener('click', showQuestionEditor);
   app.querySelector('#orderSelect')?.addEventListener('change', event => startSession(view.mode, view.category, event.target.value));
   bindSwipeNavigation(app.querySelector('.question-card'));
 }
 
 function toggleOption(letter) {
-  if (Date.now() - lastSwipeAt < 400 || view.answered || view.mode === 'review') return;
+  if (Date.now() - lastSwipeAt < 400 || view.answered || !isQuestionPractice()) return;
   const q = view.session[view.index];
   if (q.answer_count === 1) {
     view.selected = new Set([letter]);
@@ -722,7 +815,7 @@ function showDataDialog() {
   if (existing) existing.remove();
   const dialog = document.createElement('dialog');
   dialog.id = 'dataDialog';
-  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>学习记录只保存在当前浏览器。建议偶尔导出备份；导入会合并并覆盖同题记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出学习记录</button><button id="importData" class="button button-secondary">导入学习记录</button><button id="resetData" class="button button-danger">清空全部学习记录</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
+  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题记录、收藏、个人解析和备注都只保存在当前浏览器。建议偶尔导出备份；导入会用备份文件替换当前学习记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出学习记录</button><button id="importData" class="button button-secondary">导入学习记录</button><button id="resetData" class="button button-danger">清空全部学习记录</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
   document.body.appendChild(dialog); dialog.showModal();
   dialog.querySelector('#closeDialog').onclick = () => dialog.close();
   dialog.querySelector('#exportData').onclick = exportData;
@@ -754,6 +847,7 @@ importInput.addEventListener('change', async event => {
 
 function goBack() {
   if (view.screen === 'question' && view.origin === 'random') renderRandomSetup();
+  else if (view.screen === 'question' && view.origin === 'favorites') renderHome();
   else if (view.screen === 'question') renderCategories(view.mode);
   else if (view.screen === 'randomComplete') renderRandomSetup();
   else if (view.screen === 'knowledge' || view.screen === 'computerQuizSetup') renderComputerHub();
