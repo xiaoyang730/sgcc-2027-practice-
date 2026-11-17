@@ -33,7 +33,7 @@ let metadata = {};
 let computerBasics = [];
 let computerQuizQuestions = [];
 let progress = loadProgress();
-let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', randomScope: '全部题库', randomCount: 20, sessionResults: {} };
+let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', optionOrders: {}, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
 let lastSwipeAt = 0;
 
 function loadProgress() {
@@ -70,6 +70,36 @@ function showToast(message) {
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function shouldShuffleOptions(question) {
+  return question?.question_type === '单选题' || question?.question_type === '多选题';
+}
+
+function getDisplayOptions(question, namespace) {
+  const originalLetters = Object.keys(question.options);
+  if (!shouldShuffleOptions(question)) {
+    return originalLetters.map(letter => ({ displayLetter: letter, originalLetter: letter, text: question.options[letter] }));
+  }
+  if (!view.optionOrders) view.optionOrders = {};
+  const identifier = question.question_no ?? question.id;
+  const key = `${namespace}:${identifier}`;
+  const cached = view.optionOrders[key];
+  const validCache = Array.isArray(cached) && cached.length === originalLetters.length && cached.every(letter => originalLetters.includes(letter));
+  if (!validCache) view.optionOrders[key] = shuffleQuestions(originalLetters);
+  return view.optionOrders[key].map((originalLetter, index) => ({
+    displayLetter: String.fromCharCode(65 + index),
+    originalLetter,
+    text: question.options[originalLetter],
+  }));
+}
+
+function getDisplayedAnswer(question, displayOptions) {
+  const correctOptions = displayOptions.filter(option => question.answer.includes(option.originalLetter));
+  return {
+    letters: correctOptions.map(option => option.displayLetter).join('、'),
+    content: correctOptions.map(option => option.text).join('；'),
+  };
 }
 
 function summaryFor(items = questions) {
@@ -338,6 +368,7 @@ function startComputerQuiz(type, requestedCount) {
     selected: new Set(),
     answered: false,
     correct: false,
+    optionOrders: {},
   };
   setHeader(true);
   renderComputerQuestion();
@@ -350,25 +381,28 @@ function renderComputerQuestion() {
     return;
   }
   const record = getComputerRecord(question.id);
-  const options = Object.entries(question.options).map(([letter, text]) => {
-    const selected = view.selected.has(letter);
-    const correct = view.answered && question.answer.includes(letter);
-    const wrong = view.answered && selected && !question.answer.includes(letter);
-    return `<button class="option ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${wrong ? 'wrong' : ''}" data-computer-option="${letter}" ${view.answered ? 'disabled' : ''}>
-      <span class="option-letter">${letter}</span><span>${escapeHtml(text)}</span>
+  const displayOptions = getDisplayOptions(question, 'computer');
+  const displayedAnswer = getDisplayedAnswer(question, displayOptions);
+  const options = displayOptions.map(({ displayLetter, originalLetter, text }) => {
+    const selected = view.selected.has(originalLetter);
+    const correct = view.answered && question.answer.includes(originalLetter);
+    const wrong = view.answered && selected && !question.answer.includes(originalLetter);
+    return `<button class="option ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${wrong ? 'wrong' : ''}" data-computer-option="${originalLetter}" ${view.answered ? 'disabled' : ''}>
+      <span class="option-letter">${displayLetter}</span><span>${escapeHtml(text)}</span>
     </button>`;
   }).join('');
   const source = computerBasics.find(item => item.id === question.source_id);
   const statsText = record.attempts ? `已答${record.attempts}次 · 对${record.correct} · 错${record.wrong}` : '尚未作答';
   const answerBox = view.answered ? `<div class="answer-box">
-    <strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · 正确答案：${question.answer.join('、')}</strong>
+    <strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · 正确答案：${displayedAnswer.letters}</strong>
+    <p class="correct-answer-content">对应内容：${escapeHtml(displayedAnswer.content)}</p>
     <p>${escapeHtml(question.explanation)}</p>
     <p class="question-source">依据：第${question.source_id}条${source ? `「${escapeHtml(source.title)}」` : ''}</p>
   </div>` : '';
   const needsSubmit = question.answer_count > 1 && !view.answered;
   const isLast = view.index === view.computerSession.length - 1;
   app.innerHTML = `
-    <div class="toolbar"><div class="toolbar-left"><span class="pill">计算机随机测试 · ${question.question_type}</span><span class="pill">${view.index + 1}/${view.computerSession.length}</span></div></div>
+    <div class="toolbar"><div class="toolbar-left"><span class="pill">计算机随机测试 · ${question.question_type}</span><span class="pill">${view.index + 1}/${view.computerSession.length}</span>${shouldShuffleOptions(question) ? '<span class="pill">选项随机</span>' : ''}</div></div>
     <article class="question-card">
       <div class="question-head"><span class="question-number">第 ${view.index + 1} 题</span><span class="difficulty">${statsText}</span></div>
       <p class="stem">${escapeHtml(question.stem)}</p>
@@ -528,7 +562,7 @@ function startRandomSession(scope, requestedCount) {
     return;
   }
   const session = shuffleQuestions(pool).slice(0, requestedCount);
-  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, randomScope: scope, randomCount: requestedCount, sessionResults: {} };
+  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, optionOrders: {}, randomScope: scope, randomCount: requestedCount, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
@@ -566,21 +600,21 @@ function buildSession(mode, category, order = 'smart') {
 
 function startSession(mode, category, order = mode === 'practice' ? 'smart' : 'sequential') {
   const reviewPresentation = mode === 'review' ? (view.reviewPresentation || 'study') : 'study';
-  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, reviewPresentation, sessionResults: {} };
+  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, reviewPresentation, optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
 
 function startFavoriteSession() {
   const items = questions.filter(q => getRecord(q.question_no).favorite).sort((a, b) => a.question_no - b.question_no);
-  view = { screen: 'question', mode: 'review', category: '我的收藏', origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', sessionResults: {} };
+  view = { screen: 'question', mode: 'review', category: '我的收藏', origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
 
 function startFocusPractice() {
   const items = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a));
-  view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: 0, session: items, selected: new Set(), answered: false, correct: false, sessionResults: {} };
+  view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: 0, session: items, selected: new Set(), answered: false, correct: false, optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
@@ -617,7 +651,7 @@ function showQuestionEditor() {
   dialog.id = 'questionEditorDialog';
   dialog.innerHTML = `<form method="dialog" class="dialog-body question-editor">
     <h2>第${question.question_no}题 · 个人解析与备注</h2>
-    <p>修改只保存在当前浏览器，不会更改官方题干、答案或网站原始题库。</p>
+    <p>修改只保存在当前浏览器，不会更改官方题干、答案或网站原始题库。单选、多选的选项会随机换位，口诀应记选项内容，不要只记A/B/C/D。</p>
     <label class="field-label" for="customExplanation">个人解析</label>
     <textarea id="customExplanation" class="editor-textarea" rows="4" placeholder="可把原解析改成更适合自己的简短表述"></textarea>
     <div class="editor-inline-actions"><button id="restoreExplanation" class="text-button" type="button">恢复原解析</button><span>留空也会恢复原解析</span></div>
@@ -666,17 +700,20 @@ function renderQuestion() {
   const originalExplanation = !HIDE_EXPLANATION_CATEGORIES.has(q.practice_category) ? (q.explanation || '').trim() : '';
   const displayExplanation = (r.customExplanation || '').trim() || originalExplanation;
   const personalNote = (r.note || '').trim();
-  const options = Object.entries(q.options).map(([letter, text]) => {
-    const selected = view.selected.has(letter);
-    const isCorrect = answerVisible && q.answer.includes(letter);
-    const isWrong = answerVisible && selected && !q.answer.includes(letter);
-    return `<button class="option ${selected ? 'selected' : ''} ${isCorrect ? 'correct' : ''} ${isWrong ? 'wrong' : ''}" data-option="${letter}" ${answerVisible ? 'disabled' : ''}>
-      <span class="option-letter">${letter}</span><span>${escapeHtml(text)}</span>
+  const displayOptions = getDisplayOptions(q, 'public');
+  const displayedAnswer = getDisplayedAnswer(q, displayOptions);
+  const options = displayOptions.map(({ displayLetter, originalLetter, text }) => {
+    const selected = view.selected.has(originalLetter);
+    const isCorrect = answerVisible && q.answer.includes(originalLetter);
+    const isWrong = answerVisible && selected && !q.answer.includes(originalLetter);
+    return `<button class="option ${selected ? 'selected' : ''} ${isCorrect ? 'correct' : ''} ${isWrong ? 'wrong' : ''}" data-option="${originalLetter}" ${answerVisible ? 'disabled' : ''}>
+      <span class="option-letter">${displayLetter}</span><span>${escapeHtml(text)}</span>
     </button>`;
   }).join('');
   const statsText = r.attempts ? `已答 ${r.attempts} 次 · 对 ${r.correct} · 错 ${r.wrong} · 正确率 ${Math.round(r.correct / r.attempts * 100)}%` : '尚未作答';
   const answerBox = answerVisible ? `<div class="answer-box">
-    ${practicePresentation ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${q.answer.join('、')}</strong>
+    ${practicePresentation ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${displayedAnswer.letters}</strong>
+    <p class="correct-answer-content">对应内容：${escapeHtml(displayedAnswer.content)}</p>
     ${displayExplanation ? `<p><span class="answer-label">解析：</span>${escapeHtml(displayExplanation)}</p>` : ''}
     ${personalNote ? `<div class="personal-note"><strong>我的备注／口诀</strong><p>${escapeHtml(personalNote).replace(/\n/g, '<br>')}</p></div>` : ''}
   </div>` : '';
@@ -691,7 +728,7 @@ function renderQuestion() {
   const modeLabel = view.mode === 'review' ? (view.reviewPresentation === 'quiz' ? '做题' : '背题') : '刷题';
   app.innerHTML = `
     <div class="toolbar">
-      <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span></div>
+      <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span>${shouldShuffleOptions(q) ? '<span class="pill">选项随机</span>' : ''}</div>
       <div class="toolbar-right">
         ${view.mode === 'review' ? `<div class="presentation-toggle" aria-label="背题或做题"><button class="toggle-button ${view.reviewPresentation !== 'quiz' ? 'active' : ''}" data-review-presentation="study">背题</button><button class="toggle-button ${view.reviewPresentation === 'quiz' ? 'active' : ''}" data-review-presentation="quiz">做题</button></div>` : ''}
         ${view.origin === 'category' ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
@@ -805,7 +842,7 @@ function renderStats() {
   app.querySelectorAll('[data-focus-question]').forEach(button => button.addEventListener('click', () => {
     const number = Number(button.dataset.focusQuestion);
     const items = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a));
-    view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: Math.max(0, items.findIndex(q => q.question_no === number)), session: items, selected: new Set(), answered: false, correct: false, sessionResults: {} };
+    view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: Math.max(0, items.findIndex(q => q.question_no === number)), session: items, selected: new Set(), answered: false, correct: false, optionOrders: {}, sessionResults: {} };
     renderQuestion();
   }));
 }

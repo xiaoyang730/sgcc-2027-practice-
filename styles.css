@@ -112,6 +112,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .answer-box { margin-top: 16px; padding: 16px; border-radius: 16px; background: #f2f8f6; border-left: 4px solid var(--primary); }
 .answer-box strong { color: var(--primary-dark); }
 .answer-box p { margin: 8px 0 0; line-height: 1.65; }
+.correct-answer-content { color: var(--ink) !important; font-weight: 700; }
 .answer-label { color: var(--primary-dark); font-weight: 800; }
 .personal-note { margin-top: 13px; padding: 12px; border: 1px dashed #d5b45e; border-radius: 12px; background: #fff9e9; }
 .personal-note strong { color: #8c6100; }
