@@ -713,7 +713,7 @@ function renderQuestion() {
   const statsText = r.attempts ? `已答 ${r.attempts} 次 · 对 ${r.correct} · 错 ${r.wrong} · 正确率 ${Math.round(r.correct / r.attempts * 100)}%` : '尚未作答';
   const answerBox = answerVisible ? `<div class="answer-box">
     ${practicePresentation ? `<strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · ` : '<strong>'}正确答案：${displayedAnswer.letters}</strong>
-    <p class="correct-answer-content">对应内容：${escapeHtml(displayedAnswer.content)}</p>
+    ${q.practice_category !== '多选三选' ? `<p class="correct-answer-content">对应内容：${escapeHtml(displayedAnswer.content)}</p>` : ''}
     ${displayExplanation ? `<p><span class="answer-label">解析：</span>${escapeHtml(displayExplanation)}</p>` : ''}
     ${personalNote ? `<div class="personal-note"><strong>我的备注／口诀</strong><p>${escapeHtml(personalNote).replace(/\n/g, '<br>')}</p></div>` : ''}
   </div>` : '';
