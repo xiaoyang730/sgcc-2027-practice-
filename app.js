@@ -1,6 +1,7 @@
 const DATA_URL = './data/questions.json';
 const COMPUTER_BASICS_URL = './data/computer-basics.json';
 const COMPUTER_QUIZ_URL = './data/computer-quiz.json';
+const POWER_SYSTEM_BASICS_URL = './data/power-system-basics.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
 const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
 const PRACTICE_CATEGORY_ORDER = ['单选题', '多选题', '判断题'];
@@ -30,7 +31,10 @@ const toast = document.querySelector('#toast');
 
 let questions = [];
 let metadata = {};
+let defaultComputerBasics = [];
+let defaultPowerSystemBasics = [];
 let computerBasics = [];
+let powerSystemBasics = [];
 let computerQuizQuestions = [];
 let progress = loadProgress();
 let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', optionOrders: {}, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
@@ -47,6 +51,44 @@ function loadProgress() {
 function saveProgress() {
   progress.updatedAt = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function normalizeKnowledgeItems(items, defaultItems = []) {
+  return items.map((item, index) => {
+    const defaultItem = defaultItems[index];
+    const sourceId = Object.prototype.hasOwnProperty.call(item, 'sourceId')
+      ? item.sourceId
+      : (defaultItem && item.title === defaultItem.title ? defaultItem.id : null);
+    return {
+      id: index + 1,
+      title: String(item.title || '').trim(),
+      content: String(item.content || '').trim(),
+      sourceId,
+      custom: Boolean(item.custom),
+    };
+  }).filter(item => item.title && item.content);
+}
+
+function loadKnowledgeLibrary(key, defaultItems) {
+  const defaults = defaultItems.map((item, index) => ({ ...item, id: index + 1, sourceId: item.id, custom: false }));
+  const saved = progress.knowledgeLibraries?.[key];
+  if (!Array.isArray(saved) || !saved.length) return defaults;
+  const normalized = normalizeKnowledgeItems(saved);
+  return normalized.length ? normalized : defaults;
+}
+
+function reloadKnowledgeLibraries() {
+  computerBasics = loadKnowledgeLibrary('computer', defaultComputerBasics);
+  powerSystemBasics = loadKnowledgeLibrary('powerSystem', defaultPowerSystemBasics);
+}
+
+function saveKnowledgeLibrary(key, items) {
+  if (!progress.knowledgeLibraries) progress.knowledgeLibraries = {};
+  const normalized = normalizeKnowledgeItems(items);
+  progress.knowledgeLibraries[key] = normalized;
+  if (key === 'computer') computerBasics = normalized;
+  else powerSystemBasics = normalized;
+  saveProgress();
 }
 
 function getRecord(id) {
@@ -155,8 +197,12 @@ function renderHome() {
         <p>设置题库范围和题目数量，无重复随机抽题，完成后查看本组正确率。</p>
       </button>
       <button class="mode-card" id="computerBasics">
-        <span class="mode-icon">机</span><h3>计算机基础57条</h3>
-        <p>分为知识点学习和随机测试：按钮逐条学习，再用单选、多选、判断检验掌握情况。</p>
+        <span class="mode-icon">机</span><h3>计算机基础（${computerBasics.length}条）</h3>
+        <p>逐条学习并随机测试；知识点支持修改，也可以在当前条目后插入新内容。</p>
+      </button>
+      <button class="mode-card" id="powerSystemBasics">
+        <span class="mode-icon">系</span><h3>电力系统基础（${powerSystemBasics.length}条）</h3>
+        <p>完整保留原有76条资料，逐条查看；支持修改和在两条之间插入新知识点。</p>
       </button>
     </section>
     <div class="section-title"><div><h2>快速入口</h2><p>按错误频率优先</p></div></div>
@@ -170,6 +216,7 @@ function renderHome() {
   app.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => renderCategories(button.dataset.mode)));
   app.querySelector('#randomQuiz')?.addEventListener('click', renderRandomSetup);
   app.querySelector('#computerBasics')?.addEventListener('click', renderComputerHub);
+  app.querySelector('#powerSystemBasics')?.addEventListener('click', renderPowerSystemHub);
   app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
   app.querySelector('#favoriteQuestions')?.addEventListener('click', startFavoriteSession);
 }
@@ -195,19 +242,33 @@ function renderComputerHub() {
   setHeader(true);
   const summary = computerQuizSummary();
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">计算机基础专项</p><h1>先逐条学习，再随机检验</h1><p>学习模块完整呈现57条原文；测试模块只依据这57条组题，每道题均标注对应知识点。</p></section>
+    <section class="hero"><p class="eyebrow">计算机基础专项</p><h1>先逐条学习，再随机检验</h1><p>当前共${computerBasics.length}条；可以修改原内容或插入新知识点。随机测试仍依据原始57条题库。</p></section>
     <section class="mode-grid computer-mode-grid">
       <button class="mode-card" id="computerStudy">
         <span class="mode-icon">学</span><h3>知识点学习</h3>
-        <p>一次查看一条，使用“上一条／下一条”按钮切换，共57条。</p>
+        <p>一次查看一条，使用“上一条／下一条”按钮切换，共${computerBasics.length}条。</p>
       </button>
       <button class="mode-card" id="computerTest">
         <span class="mode-icon">测</span><h3>随机测试</h3>
         <p>单选、多选、判断共${computerQuizQuestions.length}题；已答${summary.attempts}次，正确率${summary.accuracy}%。</p>
       </button>
     </section>`;
-  app.querySelector('#computerStudy').addEventListener('click', () => renderKnowledgePoint(0));
+  app.querySelector('#computerStudy').addEventListener('click', () => renderKnowledgePoint('computer', 0));
   app.querySelector('#computerTest').addEventListener('click', renderComputerQuizSetup);
+}
+
+function renderPowerSystemHub() {
+  view = { ...view, screen: 'powerSystemHub', selected: new Set(), answered: false };
+  setHeader(true);
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">电力系统基础专项</p><h1>逐条掌握电力系统基础</h1><p>当前共${powerSystemBasics.length}条，按原资料顺序呈现。含“待核对”的原始标记，后续可直接修改或插入新知识点。</p></section>
+    <section class="mode-grid computer-mode-grid">
+      <button class="mode-card" id="powerSystemStudy">
+        <span class="mode-icon">学</span><h3>知识点学习</h3>
+        <p>使用“上一条／下一条”切换，编辑后保存在当前浏览器。</p>
+      </button>
+    </section>`;
+  app.querySelector('#powerSystemStudy').addEventListener('click', () => renderKnowledgePoint('powerSystem', 0));
 }
 
 function renderKnowledgeInline(text = '') {
@@ -259,38 +320,65 @@ function renderKnowledgeContent(markdown = '') {
   return output.join('');
 }
 
-function renderKnowledgePoint(index = 0) {
-  if (!computerBasics.length) {
-    app.innerHTML = `<section class="panel empty">计算机基础知识点尚未载入。</section>`;
+function getKnowledgeModule(moduleKey) {
+  if (moduleKey === 'powerSystem') {
+    return {
+      key: 'powerSystem',
+      label: '电力系统基础',
+      items: powerSystemBasics,
+      defaults: defaultPowerSystemBasics,
+    };
+  }
+  return {
+    key: 'computer',
+    label: '计算机基础',
+    items: computerBasics,
+    defaults: defaultComputerBasics,
+  };
+}
+
+function renderKnowledgePoint(moduleKey = 'computer', index = 0) {
+  const module = getKnowledgeModule(moduleKey);
+  if (!module.items.length) {
+    app.innerHTML = `<section class="panel empty">${module.label}知识点尚未载入。</section>`;
     return;
   }
-  const safeIndex = Math.max(0, Math.min(index, computerBasics.length - 1));
-  const point = computerBasics[safeIndex];
-  view = { ...view, screen: 'knowledge', knowledgeIndex: safeIndex };
+  const safeIndex = Math.max(0, Math.min(index, module.items.length - 1));
+  const point = module.items[safeIndex];
+  view = { ...view, screen: 'knowledge', knowledgeModule: moduleKey, knowledgeIndex: safeIndex };
   setHeader(true);
   app.innerHTML = `
     <div class="toolbar">
-      <div class="toolbar-left"><span class="pill">计算机基础57条</span><span class="pill">${safeIndex + 1}/${computerBasics.length}</span></div>
+      <div class="toolbar-left"><span class="pill">${module.label}</span><span class="pill">${safeIndex + 1}/${module.items.length}</span></div>
+      <div class="toolbar-right knowledge-tools">
+        <button id="editKnowledge" class="mini-button">修改本条</button>
+        <button id="insertKnowledge" class="mini-button">在本条后插入</button>
+        <button id="restoreKnowledge" class="mini-button">恢复默认</button>
+      </div>
     </div>
     <article class="question-card knowledge-card">
-      <div class="question-head"><span class="question-number">第 ${point.id} 条</span><span class="difficulty">逐条学习</span></div>
+      <div class="question-head"><span class="question-number">第 ${safeIndex + 1} 条</span><span class="difficulty">${point.custom ? '新增知识点' : '逐条学习'}</span></div>
       <h2>${escapeHtml(point.title)}</h2>
       <div class="knowledge-content">${renderKnowledgeContent(point.content)}</div>
       <div class="knowledge-nav">
         <button id="previousKnowledge" class="button button-secondary" ${safeIndex === 0 ? 'disabled' : ''}>上一条</button>
-        <button id="nextKnowledge" class="button button-primary" ${safeIndex === computerBasics.length - 1 ? 'disabled' : ''}>下一条</button>
+        <button id="nextKnowledge" class="button button-primary" ${safeIndex === module.items.length - 1 ? 'disabled' : ''}>下一条</button>
       </div>
     </article>`;
   app.querySelector('#previousKnowledge').addEventListener('click', previousKnowledgePoint);
   app.querySelector('#nextKnowledge').addEventListener('click', nextKnowledgePoint);
+  app.querySelector('#editKnowledge').addEventListener('click', () => openKnowledgeEditor('edit'));
+  app.querySelector('#insertKnowledge').addEventListener('click', () => openKnowledgeEditor('insert'));
+  app.querySelector('#restoreKnowledge').addEventListener('click', restoreKnowledgeDefaults);
 }
 
 function nextKnowledgePoint() {
-  if (view.knowledgeIndex >= computerBasics.length - 1) {
+  const module = getKnowledgeModule(view.knowledgeModule);
+  if (view.knowledgeIndex >= module.items.length - 1) {
     showToast('已经是最后一条');
     return;
   }
-  renderKnowledgePoint(view.knowledgeIndex + 1);
+  renderKnowledgePoint(view.knowledgeModule, view.knowledgeIndex + 1);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -299,8 +387,66 @@ function previousKnowledgePoint() {
     showToast('已经是第一条');
     return;
   }
-  renderKnowledgePoint(view.knowledgeIndex - 1);
+  renderKnowledgePoint(view.knowledgeModule, view.knowledgeIndex - 1);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openKnowledgeEditor(mode) {
+  const module = getKnowledgeModule(view.knowledgeModule);
+  const current = module.items[view.knowledgeIndex];
+  if (!current) return;
+  const isInsert = mode === 'insert';
+  const existing = document.querySelector('#knowledgeEditorDialog');
+  if (existing) existing.remove();
+  const dialog = document.createElement('dialog');
+  dialog.id = 'knowledgeEditorDialog';
+  dialog.innerHTML = `<div class="dialog-body">
+    <h2>${isInsert ? `在第${view.knowledgeIndex + 1}条后插入` : `修改第${view.knowledgeIndex + 1}条`}</h2>
+    <p>${isInsert ? '保存后，新条目会成为下一条，后续序号自动顺延。' : '支持普通文字、加粗和Markdown表格。'}</p>
+    <div class="question-editor knowledge-editor">
+      <label class="field-label" for="knowledgeTitle">标题</label>
+      <input id="knowledgeTitle" class="editor-input" type="text" value="${isInsert ? '' : escapeHtml(current.title)}" maxlength="120">
+      <label class="field-label" for="knowledgeContent">内容</label>
+      <textarea id="knowledgeContent" class="editor-textarea" rows="12">${isInsert ? '' : escapeHtml(current.content)}</textarea>
+      <div class="actions editor-actions">
+        <button id="saveKnowledge" class="button button-primary">保存</button>
+        <button id="cancelKnowledge" class="button button-secondary">取消</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(dialog);
+  dialog.showModal();
+  dialog.querySelector('#cancelKnowledge').onclick = () => dialog.close();
+  dialog.querySelector('#saveKnowledge').onclick = () => {
+    const title = dialog.querySelector('#knowledgeTitle').value.trim();
+    const content = dialog.querySelector('#knowledgeContent').value.trim();
+    if (!title || !content) {
+      alert('标题和内容都不能为空。');
+      return;
+    }
+    const items = module.items.map(item => ({ ...item }));
+    let targetIndex = view.knowledgeIndex;
+    if (isInsert) {
+      targetIndex += 1;
+      items.splice(targetIndex, 0, { id: targetIndex + 1, title, content, sourceId: null, custom: true });
+    } else {
+      items[targetIndex] = { ...items[targetIndex], title, content };
+    }
+    saveKnowledgeLibrary(module.key, items);
+    dialog.close();
+    renderKnowledgePoint(module.key, targetIndex);
+    showToast(isInsert ? '新知识点已插入，序号已更新' : '本条内容已保存');
+  };
+}
+
+function restoreKnowledgeDefaults() {
+  const module = getKnowledgeModule(view.knowledgeModule);
+  if (!confirm(`确定恢复${module.label}的默认内容吗？你在本模块中的修改和新增条目将被清除。`)) return;
+  if (progress.knowledgeLibraries) delete progress.knowledgeLibraries[module.key];
+  reloadKnowledgeLibraries();
+  saveProgress();
+  renderKnowledgePoint(module.key, Math.min(view.knowledgeIndex, getKnowledgeModule(module.key).items.length - 1));
+  showToast(`${module.label}已恢复默认内容`);
 }
 
 function getComputerQuizPool(type) {
@@ -391,13 +537,14 @@ function renderComputerQuestion() {
       <span class="option-letter">${displayLetter}</span><span>${escapeHtml(text)}</span>
     </button>`;
   }).join('');
-  const source = computerBasics.find(item => item.id === question.source_id);
+  const sourceIndex = computerBasics.findIndex(item => Number(item.sourceId) === Number(question.source_id));
+  const source = sourceIndex >= 0 ? computerBasics[sourceIndex] : null;
   const statsText = record.attempts ? `已答${record.attempts}次 · 对${record.correct} · 错${record.wrong}` : '尚未作答';
   const answerBox = view.answered ? `<div class="answer-box">
     <strong class="${view.correct ? 'result-good' : 'result-bad'}">${view.correct ? '回答正确' : '回答错误'} · 正确答案：${displayedAnswer.letters}</strong>
     <p class="correct-answer-content">对应内容：${escapeHtml(displayedAnswer.content)}</p>
     <p>${escapeHtml(question.explanation)}</p>
-    <p class="question-source">依据：第${question.source_id}条${source ? `「${escapeHtml(source.title)}」` : ''}</p>
+    <p class="question-source">依据：${source ? `当前第${sourceIndex + 1}条「${escapeHtml(source.title)}」` : `原第${question.source_id}条`}</p>
   </div>` : '';
   const needsSubmit = question.answer_count > 1 && !view.answered;
   const isLast = view.index === view.computerSession.length - 1;
@@ -852,14 +999,14 @@ function showDataDialog() {
   if (existing) existing.remove();
   const dialog = document.createElement('dialog');
   dialog.id = 'dataDialog';
-  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题记录、收藏、个人解析和备注都只保存在当前浏览器。建议偶尔导出备份；导入会用备份文件替换当前学习记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出学习记录</button><button id="importData" class="button button-secondary">导入学习记录</button><button id="resetData" class="button button-danger">清空全部学习记录</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
+  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题记录、收藏、个人解析、备注以及两个知识模块的修改和新增内容，都只保存在当前浏览器。建议偶尔导出备份；导入会替换当前浏览器记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出全部记录</button><button id="importData" class="button button-secondary">导入全部记录</button><button id="resetData" class="button button-danger">清空记录并恢复知识点</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
   document.body.appendChild(dialog); dialog.showModal();
   dialog.querySelector('#closeDialog').onclick = () => dialog.close();
   dialog.querySelector('#exportData').onclick = exportData;
   dialog.querySelector('#importData').onclick = () => importInput.click();
   dialog.querySelector('#resetData').onclick = () => {
-    if (confirm('确定清空当前浏览器中的全部学习记录吗？此操作无法撤销。')) {
-      localStorage.removeItem(STORAGE_KEY); progress = loadProgress(); dialog.close(); renderHome(); showToast('学习记录已清空');
+    if (confirm('确定清空全部学习记录，并撤销两个知识模块中的修改和新增内容吗？此操作无法撤销。')) {
+      localStorage.removeItem(STORAGE_KEY); progress = loadProgress(); reloadKnowledgeLibraries(); dialog.close(); renderHome(); showToast('全部记录已清空，知识点已恢复默认');
     }
   };
 }
@@ -877,7 +1024,7 @@ importInput.addEventListener('change', async event => {
   try {
     const imported = JSON.parse(await file.text());
     if (imported?.version !== 1 || !imported.questions) throw new Error('格式不正确');
-    progress = imported; saveProgress(); showToast('学习记录已恢复'); renderHome();
+    progress = imported; saveProgress(); reloadKnowledgeLibraries(); showToast('学习记录和知识点已恢复'); renderHome();
   } catch (_) { alert('无法导入：文件格式不正确。'); }
   event.target.value = '';
 });
@@ -887,8 +1034,11 @@ function goBack() {
   else if (view.screen === 'question' && view.origin === 'favorites') renderHome();
   else if (view.screen === 'question') renderCategories(view.mode);
   else if (view.screen === 'randomComplete') renderRandomSetup();
-  else if (view.screen === 'knowledge' || view.screen === 'computerQuizSetup') renderComputerHub();
+  else if (view.screen === 'knowledge') view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub();
+  else if (view.screen === 'computerQuizSetup') renderComputerHub();
   else if (view.screen === 'computerQuizQuestion' || view.screen === 'computerQuizComplete') renderComputerQuizSetup();
+  else if (view.screen === 'powerSystemHub') renderHome();
+  else if (view.screen === 'computerHub') renderHome();
   else renderHome();
 }
 
@@ -900,14 +1050,17 @@ dataButton.addEventListener('click', showDataDialog);
 
 async function init() {
   try {
-    const [questionResponse, basicsResponse, computerQuizResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL)]);
+    const [questionResponse, basicsResponse, computerQuizResponse, powerSystemResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL), fetch(POWER_SYSTEM_BASICS_URL)]);
     if (!questionResponse.ok) throw new Error(`题库 HTTP ${questionResponse.status}`);
     if (!basicsResponse.ok) throw new Error(`计算机基础 HTTP ${basicsResponse.status}`);
     if (!computerQuizResponse.ok) throw new Error(`计算机测试题库 HTTP ${computerQuizResponse.status}`);
-    const [questionPayload, basicsPayload, computerQuizPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json()]);
+    if (!powerSystemResponse.ok) throw new Error(`电力系统基础 HTTP ${powerSystemResponse.status}`);
+    const [questionPayload, basicsPayload, computerQuizPayload, powerSystemPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json(), powerSystemResponse.json()]);
     questions = questionPayload.questions;
     metadata = questionPayload.metadata;
-    computerBasics = basicsPayload.items;
+    defaultComputerBasics = basicsPayload.items;
+    defaultPowerSystemBasics = powerSystemPayload.items;
+    reloadKnowledgeLibraries();
     computerQuizQuestions = computerQuizPayload.questions;
     renderHome();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
