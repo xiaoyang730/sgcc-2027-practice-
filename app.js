@@ -5,6 +5,12 @@ const POWER_SYSTEM_BASICS_URL = './data/power-system-basics.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
 const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
 const PRACTICE_CATEGORY_ORDER = ['单选题', '多选题', '判断题'];
+const SINGLE_CHOICE_REVIEW_PARTS = [
+  { key: '单选·第1部分', label: '第1部分', start: 1, end: 88 },
+  { key: '单选·第2部分', label: '第2部分', start: 89, end: 176 },
+  { key: '单选·第3部分', label: '第3部分', start: 177, end: 264 },
+  { key: '单选·第4部分', label: '第4部分', start: 265, end: 352 },
+];
 const COMPUTER_QUIZ_TYPES = ['全部题型', '单选题', '多选题', '判断题'];
 const REVIEW_CATEGORY_DESCRIPTIONS = {
   '单选': '每题选择一个正确答案',
@@ -37,7 +43,7 @@ let computerBasics = [];
 let powerSystemBasics = [];
 let computerQuizQuestions = [];
 let progress = loadProgress();
-let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', optionOrders: {}, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
+let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', showQuestionStats: false, optionOrders: {}, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
 let lastSwipeAt = 0;
 
 function loadProgress() {
@@ -166,7 +172,7 @@ function setHeader(canBack) {
 }
 
 function renderHome() {
-  view = { ...view, screen: 'home', mode: null, category: null, origin: null, session: [], index: 0, selected: new Set(), answered: false, sessionResults: {} };
+  view = { ...view, screen: 'home', mode: null, category: null, origin: null, session: [], index: 0, selected: new Set(), answered: false, showQuestionStats: false, sessionResults: {} };
   setHeader(false);
   const s = summaryFor();
   const focus = questions.filter(q => getRecord(q.question_no).wrong > 0).length;
@@ -648,7 +654,31 @@ function renderCategories(mode) {
     <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${isReview ? '按答案特征细分为六类；进入题目后可随时切换“背题”或“做题”。' : '按基础题型混合答案结构，不提前透露多选数量或判断正误。'}</p></section>
     <div class="section-title"><div><h2>${isReview ? '六类背题' : '三类刷题'}</h2><p>合计 ${questions.length} 题</p></div></div>
     <section class="category-grid">${cards}</section>`;
-  app.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => startSession(mode, button.dataset.category)));
+  app.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => {
+    const category = button.dataset.category;
+    if (mode === 'review' && category === '单选') renderSingleChoiceParts();
+    else startSession(mode, category);
+  }));
+}
+
+function renderSingleChoiceParts() {
+  view = { ...view, screen: 'singleChoiceParts', mode: 'review', category: '单选', origin: null, showQuestionStats: false };
+  setHeader(true);
+  const cards = SINGLE_CHOICE_REVIEW_PARTS.map(part => {
+    const items = getCategoryQuestions('review', part.key);
+    const s = summaryFor(items);
+    const percent = items.length ? Math.round(s.touched / items.length * 100) : 0;
+    return `<button class="category-card" data-single-part="${part.key}">
+      <div class="category-top"><h3>${part.label}</h3><span class="category-count">${items.length}题</span></div>
+      <div class="category-meta"><span>原题第${part.start}—${part.end}题</span><span>已学 ${s.touched}/${items.length}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">背题模式 · 单选题</p><h1>分四部分逐步学习</h1><p>352道单选题平均分成4组，每组88题。每组都可以独立选择智能、题号或随机顺序。</p></section>
+    <div class="section-title"><div><h2>选择学习部分</h2><p>每部分88题</p></div></div>
+    <section class="category-grid">${cards}</section>`;
+  app.querySelectorAll('[data-single-part]').forEach(button => button.addEventListener('click', () => startSession('review', button.dataset.singlePart, 'sequential', 'singleChoicePart')));
 }
 
 function renderRandomSetup() {
@@ -732,6 +762,10 @@ function renderRandomComplete() {
 }
 
 function getCategoryQuestions(mode, category) {
+  const singlePart = mode === 'review' ? SINGLE_CHOICE_REVIEW_PARTS.find(part => part.key === category) : null;
+  if (singlePart) {
+    return questions.filter(q => q.practice_category === '单选' && q.question_no >= singlePart.start && q.question_no <= singlePart.end);
+  }
   return mode === 'review'
     ? questions.filter(q => q.practice_category === category)
     : questions.filter(q => q.question_type === category);
@@ -745,23 +779,23 @@ function buildSession(mode, category, order = 'smart') {
   return items;
 }
 
-function startSession(mode, category, order = mode === 'practice' ? 'smart' : 'sequential') {
+function startSession(mode, category, order = mode === 'practice' ? 'smart' : 'sequential', origin = 'category') {
   const reviewPresentation = mode === 'review' ? (view.reviewPresentation || 'study') : 'study';
-  view = { screen: 'question', mode, category, origin: 'category', order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, reviewPresentation, optionOrders: {}, sessionResults: {} };
+  view = { screen: 'question', mode, category, origin, order, index: 0, session: buildSession(mode, category, order), selected: new Set(), answered: false, correct: false, reviewPresentation, showQuestionStats: false, optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
 
 function startFavoriteSession() {
   const items = questions.filter(q => getRecord(q.question_no).favorite).sort((a, b) => a.question_no - b.question_no);
-  view = { screen: 'question', mode: 'review', category: '我的收藏', origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', optionOrders: {}, sessionResults: {} };
+  view = { screen: 'question', mode: 'review', category: '我的收藏', origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', showQuestionStats: false, optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
 
 function startFocusPractice() {
   const items = questions.filter(q => getRecord(q.question_no).wrong > 0).sort((a, b) => smartScore(b) - smartScore(a));
-  view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: 0, session: items, selected: new Set(), answered: false, correct: false, optionOrders: {}, sessionResults: {} };
+  view = { screen: 'question', mode: 'practice', category: '重点复习', origin: 'focus', order: 'smart', index: 0, session: items, selected: new Set(), answered: false, correct: false, showQuestionStats: false, optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
@@ -786,6 +820,11 @@ function toggleFavorite() {
   record.favorite = !record.favorite;
   saveProgress();
   showToast(record.favorite ? '已加入收藏' : '已取消收藏');
+  renderQuestion();
+}
+
+function toggleQuestionStats() {
+  view.showQuestionStats = !view.showQuestionStats;
   renderQuestion();
 }
 
@@ -878,12 +917,12 @@ function renderQuestion() {
       <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span>${shouldShuffleOptions(q) ? '<span class="pill">选项随机</span>' : ''}</div>
       <div class="toolbar-right">
         ${view.mode === 'review' ? `<div class="presentation-toggle" aria-label="背题或做题"><button class="toggle-button ${view.reviewPresentation !== 'quiz' ? 'active' : ''}" data-review-presentation="study">背题</button><button class="toggle-button ${view.reviewPresentation === 'quiz' ? 'active' : ''}" data-review-presentation="quiz">做题</button></div>` : ''}
-        ${view.origin === 'category' ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
+        ${['category', 'singleChoicePart'].includes(view.origin) ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
       </div>
     </div>
     <article class="question-card">
-      <div class="question-head"><span class="question-number">第 ${q.question_no} 题</span><div class="question-tools"><button id="favoriteButton" class="mini-button ${r.favorite ? 'favorite-active' : ''}">${r.favorite ? '★ 已收藏' : '☆ 收藏'}</button><button id="editQuestion" class="mini-button">编辑解析／备注</button></div></div>
-      <p class="question-meta">${q.difficulty_source || '未标难度'} · ${statsText}</p>
+      <div class="question-head"><span class="question-number">第 ${q.question_no} 题</span><div class="question-tools"><button id="toggleQuestionStats" class="mini-button">${view.showQuestionStats ? '隐藏记录' : '显示记录'}</button><button id="favoriteButton" class="mini-button ${r.favorite ? 'favorite-active' : ''}">${r.favorite ? '★ 已收藏' : '☆ 收藏'}</button><button id="editQuestion" class="mini-button">编辑解析／备注</button></div></div>
+      <p class="question-meta">${q.difficulty_source || '未标难度'}${view.showQuestionStats ? ` · ${statsText}` : ''}</p>
       <p class="stem">${escapeHtml(q.stem)}</p>
       <div class="options">${options}</div>
       ${answerBox}
@@ -894,8 +933,9 @@ function renderQuestion() {
   app.querySelectorAll('[data-review-presentation]').forEach(button => button.addEventListener('click', () => setReviewPresentation(button.dataset.reviewPresentation)));
   app.querySelector('#submitAnswer')?.addEventListener('click', submitAnswer);
   app.querySelector('#favoriteButton').addEventListener('click', toggleFavorite);
+  app.querySelector('#toggleQuestionStats').addEventListener('click', toggleQuestionStats);
   app.querySelector('#editQuestion').addEventListener('click', showQuestionEditor);
-  app.querySelector('#orderSelect')?.addEventListener('change', event => startSession(view.mode, view.category, event.target.value));
+  app.querySelector('#orderSelect')?.addEventListener('change', event => startSession(view.mode, view.category, event.target.value, view.origin));
   bindSwipeNavigation(app.querySelector('.question-card'));
 }
 
@@ -1032,7 +1072,9 @@ importInput.addEventListener('change', async event => {
 function goBack() {
   if (view.screen === 'question' && view.origin === 'random') renderRandomSetup();
   else if (view.screen === 'question' && view.origin === 'favorites') renderHome();
+  else if (view.screen === 'question' && view.origin === 'singleChoicePart') renderSingleChoiceParts();
   else if (view.screen === 'question') renderCategories(view.mode);
+  else if (view.screen === 'singleChoiceParts') renderCategories('review');
   else if (view.screen === 'randomComplete') renderRandomSetup();
   else if (view.screen === 'knowledge') view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub();
   else if (view.screen === 'computerQuizSetup') renderComputerHub();
