@@ -739,12 +739,41 @@ function startRandomSession(scope, requestedCount) {
     return;
   }
   const session = shuffleQuestions(pool).slice(0, requestedCount);
-  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, optionOrders: {}, randomScope: scope, randomCount: requestedCount, sessionResults: {} };
+  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, showQuestionStats: false, optionOrders: {}, randomScope: scope, randomCount: requestedCount, sessionAnswers: {}, sessionResults: {}, randomFinalized: false };
   setHeader(true);
   renderQuestion();
 }
 
+function isChosenAnswerCorrect(question, chosenAnswer) {
+  const chosen = [...(chosenAnswer || [])].sort();
+  const answer = [...question.answer].sort();
+  return chosen.length === answer.length && chosen.every((item, index) => item === answer[index]);
+}
+
+function finalizeRandomSession() {
+  if (view.randomFinalized) return;
+  const results = {};
+  for (const question of view.session) {
+    const key = String(question.question_no);
+    const chosen = view.sessionAnswers?.[key];
+    if (!chosen?.length) continue;
+    const correct = isChosenAnswerCorrect(question, chosen);
+    results[key] = correct;
+    const record = getRecord(question.question_no);
+    record.attempts += 1;
+    record.correct += correct ? 1 : 0;
+    record.wrong += correct ? 0 : 1;
+    record.lastAnswered = new Date().toISOString();
+    record.lastResult = correct;
+    record.recent = [...(record.recent || []), correct].slice(-10);
+  }
+  view.sessionResults = results;
+  view.randomFinalized = true;
+  saveProgress();
+}
+
 function renderRandomComplete() {
+  finalizeRandomSession();
   view.screen = 'randomComplete';
   setHeader(true);
   const results = Object.values(view.sessionResults || {});
@@ -752,13 +781,65 @@ function renderRandomComplete() {
   const correct = results.filter(Boolean).length;
   const wrong = answered - correct;
   const unanswered = view.session.length - answered;
-  const accuracy = answered ? Math.round(correct / answered * 100) : 0;
+  const accuracy = view.session.length ? Math.round(correct / view.session.length * 100) : 0;
+  const wrongQuestions = view.session.filter(question => view.sessionResults?.[String(question.question_no)] === false);
+  const wrongList = wrongQuestions.map(question => `<button class="stat-row random-wrong-row" data-random-wrong="${question.question_no}">
+    <strong>第${question.question_no}题</strong><div><span>${question.question_type}</span><small>点击查看你的选择、正确答案和解析</small></div><div class="stat-value">查看</div>
+  </button>`).join('');
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">本组完成</p><h1>${correct}/${answered || 0} 题正确</h1><p>已作答 ${answered} 题，正确率 ${accuracy}%${unanswered ? `，另有 ${unanswered} 题未作答` : ''}。结果已计入当前浏览器的个人统计。</p></section>
+    <section class="hero"><p class="eyebrow">本组完成</p><h1>${correct}/${view.session.length || 0} 题正确</h1><p>整体正确率 ${accuracy}%，答错 ${wrong} 题${unanswered ? `，未作答 ${unanswered} 题` : ''}。本轮结果已统一计入个人统计。</p></section>
     <section class="summary-grid"><article class="summary-card"><strong>${view.session.length}</strong><span>本组题数</span></article><article class="summary-card"><strong>${correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${wrong}</strong><span>回答错误</span></article></section>
+    <div class="section-title"><div><h2>本轮错题</h2><p>先看题号，点击后单题复盘</p></div></div>
+    <section class="stats-list random-wrong-list">${wrongList || '<div class="panel empty">本轮没有错题。</div>'}</section>
     <section class="panel"><div class="actions"><button id="randomSettings" class="button button-secondary">修改设置</button><button id="randomAgain" class="button button-primary">同样设置再来一组</button></div></section>`;
+  app.querySelectorAll('[data-random-wrong]').forEach(button => button.addEventListener('click', () => renderRandomWrongReview(Number(button.dataset.randomWrong))));
   app.querySelector('#randomSettings').addEventListener('click', renderRandomSetup);
   app.querySelector('#randomAgain').addEventListener('click', () => startRandomSession(view.randomScope, view.randomCount));
+}
+
+function renderRandomWrongReview(questionNumber) {
+  const question = view.session.find(item => item.question_no === questionNumber);
+  if (!question || view.sessionResults?.[String(questionNumber)] !== false) {
+    renderRandomComplete();
+    return;
+  }
+  view.screen = 'randomWrongReview';
+  setHeader(true);
+  const record = getRecord(question.question_no);
+  const chosen = view.sessionAnswers?.[String(question.question_no)] || [];
+  const displayOptions = getDisplayOptions(question, 'public');
+  const displayedAnswer = getDisplayedAnswer(question, displayOptions);
+  const chosenOptions = displayOptions.filter(option => chosen.includes(option.originalLetter));
+  const chosenLetters = chosenOptions.map(option => option.displayLetter).join('、') || '未作答';
+  const chosenContent = chosenOptions.map(option => option.text).join('；') || '未作答';
+  const originalExplanation = !HIDE_EXPLANATION_CATEGORIES.has(question.practice_category) ? (question.explanation || '').trim() : '';
+  const displayExplanation = (record.customExplanation || '').trim() || originalExplanation;
+  const personalNote = (record.note || '').trim();
+  const options = displayOptions.map(({ displayLetter, originalLetter, text }) => {
+    const selected = chosen.includes(originalLetter);
+    const correct = question.answer.includes(originalLetter);
+    const wrong = selected && !correct;
+    return `<button class="option ${selected ? 'selected' : ''} ${correct ? 'correct' : ''} ${wrong ? 'wrong' : ''}" disabled>
+      <span class="option-letter">${displayLetter}</span><span>${escapeHtml(text)}</span>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <div class="toolbar"><div class="toolbar-left"><span class="pill">本轮错题复盘</span><span class="pill">第${question.question_no}题</span></div></div>
+    <article class="question-card">
+      <div class="question-head"><span class="question-number">第 ${question.question_no} 题</span><span class="difficulty">${question.question_type}</span></div>
+      <p class="stem">${escapeHtml(question.stem)}</p>
+      <div class="options">${options}</div>
+      <div class="answer-box">
+        <strong class="result-bad">你的答案：${chosenLetters}</strong>
+        <p>你的选择：${escapeHtml(chosenContent)}</p>
+        <p><span class="answer-label">正确答案：</span>${displayedAnswer.letters}</p>
+        ${question.practice_category !== '多选三选' ? `<p class="correct-answer-content">对应内容：${escapeHtml(displayedAnswer.content)}</p>` : ''}
+        ${displayExplanation ? `<p><span class="answer-label">解析：</span>${escapeHtml(displayExplanation)}</p>` : ''}
+        ${personalNote ? `<div class="personal-note"><strong>我的备注／口诀</strong><p>${escapeHtml(personalNote).replace(/\n/g, '<br>')}</p></div>` : ''}
+      </div>
+      <div class="actions single-action"><button id="backToRandomSummary" class="button button-primary">返回本轮汇总</button></div>
+    </article>`;
+  app.querySelector('#backToRandomSummary').addEventListener('click', renderRandomComplete);
 }
 
 function getCategoryQuestions(mode, category) {
@@ -881,8 +962,12 @@ function renderQuestion() {
     view.lastViewedQuestion = q.question_no;
   }
   const r = getRecord(q.question_no);
+  if (view.origin === 'random') {
+    const savedSelection = view.sessionAnswers?.[String(q.question_no)] || [];
+    if (!view.selected.size && savedSelection.length) view.selected = new Set(savedSelection);
+  }
   const practicePresentation = isQuestionPractice();
-  const answerVisible = !practicePresentation || view.answered;
+  const answerVisible = view.origin === 'random' ? false : (!practicePresentation || view.answered);
   const originalExplanation = !HIDE_EXPLANATION_CATEGORIES.has(q.practice_category) ? (q.explanation || '').trim() : '';
   const displayExplanation = (r.customExplanation || '').trim() || originalExplanation;
   const personalNote = (r.note || '').trim();
@@ -903,8 +988,13 @@ function renderQuestion() {
     ${displayExplanation ? `<p><span class="answer-label">解析：</span>${escapeHtml(displayExplanation)}</p>` : ''}
     ${personalNote ? `<div class="personal-note"><strong>我的备注／口诀</strong><p>${escapeHtml(personalNote).replace(/\n/g, '<br>')}</p></div>` : ''}
   </div>` : '';
+  const hasSavedRandomAnswer = view.origin === 'random' && Boolean(view.sessionAnswers?.[String(q.question_no)]?.length);
   const needsSubmitButton = practicePresentation && q.answer_count > 1 && !view.answered;
-  const gestureHint = !practicePresentation
+  const gestureHint = view.origin === 'random'
+    ? q.answer_count === 1
+      ? '点击选项后自动进入下一题 · 本轮结束后统一判分'
+      : '选择所有答案并提交 · 本轮结束后统一判分'
+    : !practicePresentation
     ? '左滑下一题 · 右滑上一题'
     : view.answered
       ? '已显示解析 · 左滑下一题 · 右滑上一题'
@@ -922,11 +1012,11 @@ function renderQuestion() {
     </div>
     <article class="question-card">
       <div class="question-head"><span class="question-number">第 ${q.question_no} 题</span><div class="question-tools"><button id="toggleQuestionStats" class="mini-button">${view.showQuestionStats ? '隐藏记录' : '显示记录'}</button><button id="favoriteButton" class="mini-button ${r.favorite ? 'favorite-active' : ''}">${r.favorite ? '★ 已收藏' : '☆ 收藏'}</button><button id="editQuestion" class="mini-button">编辑解析／备注</button></div></div>
-      <p class="question-meta">${q.difficulty_source || '未标难度'}${view.showQuestionStats ? ` · ${statsText}` : ''}</p>
+      ${view.showQuestionStats ? `<p class="question-meta">${q.difficulty_source || '未标难度'} · ${statsText}</p>` : ''}
       <p class="stem">${escapeHtml(q.stem)}</p>
       <div class="options">${options}</div>
       ${answerBox}
-      ${needsSubmitButton ? `<div class="actions single-action"><button id="submitAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>提交答案</button></div>` : ''}
+      ${needsSubmitButton ? `<div class="actions single-action"><button id="submitAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>${hasSavedRandomAnswer ? '更新答案并继续' : '提交答案'}</button></div>` : ''}
       <p class="gesture-hint">${gestureHint}</p>
     </article>`;
   app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => toggleOption(button.dataset.option)));
@@ -956,6 +1046,12 @@ function submitAnswer() {
   if (Date.now() - lastSwipeAt < 400 || view.answered || !view.selected.size) return;
   const q = view.session[view.index];
   const chosen = [...view.selected].sort();
+  if (view.origin === 'random') {
+    if (!view.sessionAnswers) view.sessionAnswers = {};
+    view.sessionAnswers[String(q.question_no)] = chosen;
+    advanceRandomAfterAnswer();
+    return;
+  }
   const correct = chosen.length === q.answer.length && chosen.every((item, index) => item === [...q.answer].sort()[index]);
   const r = getRecord(q.question_no);
   r.attempts += 1;
@@ -964,27 +1060,48 @@ function submitAnswer() {
   r.lastAnswered = new Date().toISOString();
   r.lastResult = correct;
   r.recent = [...(r.recent || []), correct].slice(-10);
-  if (view.origin === 'random') view.sessionResults[String(q.question_no)] = correct;
   saveProgress();
   view.answered = true;
   view.correct = correct;
   renderQuestion();
 }
 
-function nextQuestion() {
-  if (view.index < view.session.length - 1) view.index += 1;
-  else if (view.origin === 'random') {
+function advanceRandomAfterAnswer() {
+  const unansweredIndex = view.session.findIndex(question => !view.sessionAnswers?.[String(question.question_no)]?.length);
+  if (unansweredIndex < 0) {
     renderRandomComplete();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
+  }
+  if (view.index < view.session.length - 1) view.index += 1;
+  else view.index = unansweredIndex;
+  view.selected = new Set(view.sessionAnswers?.[String(view.session[view.index].question_no)] || []);
+  view.answered = false;
+  view.correct = false;
+  renderQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextQuestion() {
+  if (view.index < view.session.length - 1) view.index += 1;
+  else if (view.origin === 'random') {
+    const unansweredIndex = view.session.findIndex(question => !view.sessionAnswers?.[String(question.question_no)]?.length);
+    if (unansweredIndex >= 0) {
+      view.index = unansweredIndex;
+      showToast(`还有${view.session.filter(question => !view.sessionAnswers?.[String(question.question_no)]?.length).length}题未作答`);
+    } else {
+      renderRandomComplete();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
   } else view.index = 0;
-  view.selected = new Set(); view.answered = false; view.correct = false;
+  view.selected = new Set(view.origin === 'random' ? (view.sessionAnswers?.[String(view.session[view.index].question_no)] || []) : []); view.answered = false; view.correct = false;
   renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function previousQuestion() {
   if (view.index > 0) view.index -= 1;
-  view.selected = new Set(); view.answered = false; view.correct = false;
+  view.selected = new Set(view.origin === 'random' ? (view.sessionAnswers?.[String(view.session[view.index].question_no)] || []) : []); view.answered = false; view.correct = false;
   renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1076,6 +1193,7 @@ function goBack() {
   else if (view.screen === 'question') renderCategories(view.mode);
   else if (view.screen === 'singleChoiceParts') renderCategories('review');
   else if (view.screen === 'randomComplete') renderRandomSetup();
+  else if (view.screen === 'randomWrongReview') renderRandomComplete();
   else if (view.screen === 'knowledge') view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub();
   else if (view.screen === 'computerQuizSetup') renderComputerHub();
   else if (view.screen === 'computerQuizQuestion' || view.screen === 'computerQuizComplete') renderComputerQuizSetup();
