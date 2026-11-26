@@ -686,7 +686,7 @@ function renderRandomSetup() {
   setHeader(true);
   const scopeOptions = ['全部题库', ...PRACTICE_CATEGORY_ORDER].map(scope => `<option value="${scope}" ${view.randomScope === scope ? 'selected' : ''}>${scope}</option>`).join('');
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">随机刷题</p><h1>自己设置这一组刷多少题</h1><p>从所选范围内无重复随机抽取。每次重新开始都会生成一组新题，作答结果照常计入个人统计。</p></section>
+    <section class="hero"><p class="eyebrow">随机刷题</p><h1>自己设置这一组刷多少题</h1><p>从所选范围内无重复随机抽取。选择全部题库时按题型比例组卷，并按单选、多选、判断的顺序作答。</p></section>
     <div class="section-title"><div><h2>组卷设置</h2><p>最多 ${questions.length} 题</p></div></div>
     <section class="panel random-panel">
       <label class="field-label" for="randomScope">题库范围</label>
@@ -697,7 +697,7 @@ function renderRandomSetup() {
         <button id="startRandom" class="button button-primary">开始随机刷题</button>
       </div>
       <div class="preset-grid" aria-label="常用题数">
-        ${[10, 20, 30, 50, 100].map(count => `<button class="preset-button" data-random-count="${count}">${count}题</button>`).join('')}
+        ${[10, 20, 30, 50, 100, 200].map(count => `<button class="preset-button" data-random-count="${count}">${count}题</button>`).join('')}
       </div>
       <p id="randomLimit" class="random-note">全部题库可抽取 ${questions.length} 题。</p>
     </section>`;
@@ -707,10 +707,20 @@ function renderRandomSetup() {
   const updateLimit = () => {
     const poolSize = getRandomPool(scopeSelect.value).length;
     countInput.max = poolSize;
-    limitText.textContent = `${scopeSelect.value}可抽取 ${poolSize} 题。`;
+    const requestedCount = Number(countInput.value);
+    if (scopeSelect.value === '全部题库' && Number.isInteger(requestedCount) && requestedCount >= 1 && requestedCount <= poolSize) {
+      const plan = getProportionalRandomPlan(requestedCount);
+      limitText.textContent = `本轮：单选${plan[0].count}题 · 多选${plan[1].count}题 · 判断${plan[2].count}题；按此顺序作答。`;
+    } else {
+      limitText.textContent = `${scopeSelect.value}可抽取 ${poolSize} 题。`;
+    }
   };
   scopeSelect.addEventListener('change', updateLimit);
-  app.querySelectorAll('[data-random-count]').forEach(button => button.addEventListener('click', () => { countInput.value = button.dataset.randomCount; }));
+  countInput.addEventListener('input', updateLimit);
+  app.querySelectorAll('[data-random-count]').forEach(button => button.addEventListener('click', () => {
+    countInput.value = button.dataset.randomCount;
+    updateLimit();
+  }));
   app.querySelector('#startRandom').addEventListener('click', () => startRandomSession(scopeSelect.value, Number(countInput.value)));
   updateLimit();
 }
@@ -728,6 +738,34 @@ function shuffleQuestions(items) {
   return shuffled;
 }
 
+function getProportionalRandomPlan(requestedCount) {
+  const groups = PRACTICE_CATEGORY_ORDER.map((type, index) => ({
+    type,
+    index,
+    pool: questions.filter(question => question.question_type === type),
+  }));
+  const total = groups.reduce((sum, group) => sum + group.pool.length, 0);
+  const plan = groups.map(group => {
+    const exactCount = requestedCount * group.pool.length / total;
+    return { ...group, count: Math.floor(exactCount), remainder: exactCount % 1 };
+  });
+  let unassigned = requestedCount - plan.reduce((sum, group) => sum + group.count, 0);
+  const remainderOrder = [...plan].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (const group of remainderOrder) {
+    if (unassigned <= 0) break;
+    if (group.count < group.pool.length) {
+      group.count += 1;
+      unassigned -= 1;
+    }
+  }
+  return plan.sort((a, b) => a.index - b.index);
+}
+
+function buildRandomSession(scope, requestedCount) {
+  if (scope !== '全部题库') return shuffleQuestions(getRandomPool(scope)).slice(0, requestedCount);
+  return getProportionalRandomPlan(requestedCount).flatMap(group => shuffleQuestions(group.pool).slice(0, group.count));
+}
+
 function startRandomSession(scope, requestedCount) {
   const pool = getRandomPool(scope);
   if (!Number.isInteger(requestedCount) || requestedCount < 1) {
@@ -738,7 +776,7 @@ function startRandomSession(scope, requestedCount) {
     showToast(`${scope}最多可抽取${pool.length}题`);
     return;
   }
-  const session = shuffleQuestions(pool).slice(0, requestedCount);
+  const session = buildRandomSession(scope, requestedCount);
   view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, showQuestionStats: false, optionOrders: {}, randomScope: scope, randomCount: requestedCount, sessionAnswers: {}, sessionResults: {}, randomFinalized: false };
   setHeader(true);
   renderQuestion();
