@@ -1,7 +1,8 @@
-const DATA_URL = './data/questions.json';
+const DATA_URL = './data/questions.json?v=20';
 const COMPUTER_BASICS_URL = './data/computer-basics.json';
 const COMPUTER_QUIZ_URL = './data/computer-quiz.json';
 const POWER_SYSTEM_BASICS_URL = './data/power-system-basics.json';
+const REVIEW_TOPICS_URL = './data/review-topics.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
 const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
 const PRACTICE_CATEGORY_ORDER = ['单选题', '多选题', '判断题'];
@@ -42,6 +43,7 @@ let defaultPowerSystemBasics = [];
 let computerBasics = [];
 let powerSystemBasics = [];
 let computerQuizQuestions = [];
+let reviewTopics = [];
 let progress = loadProgress();
 let view = { screen: 'home', mode: null, category: null, origin: null, order: 'smart', index: 0, session: [], selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', showQuestionStats: false, optionOrders: {}, randomScope: '全部题库', randomCount: 20, sessionResults: {} };
 let lastSwipeAt = 0;
@@ -653,11 +655,42 @@ function renderCategories(mode) {
   app.innerHTML = `
     <section class="hero"><p class="eyebrow">${title}</p><h1>选择题目分类</h1><p>${isReview ? '按答案特征细分为六类；进入题目后可随时切换“背题”或“做题”。' : '按基础题型混合答案结构，不提前透露多选数量或判断正误。'}</p></section>
     <div class="section-title"><div><h2>${isReview ? '六类背题' : '三类刷题'}</h2><p>合计 ${questions.length} 题</p></div></div>
-    <section class="category-grid">${cards}</section>`;
+    <section class="category-grid">${cards}</section>
+    ${isReview ? `
+      <div class="section-title"><div><h2>专题加练</h2><p>从全部题库额外归集，原六类内容保持不变</p></div></div>
+      <section class="panel">
+        <button id="reviewTopics" class="category-card topic-entry-card">
+          <div class="category-top"><h3>进入专题模块</h3><span class="category-count">3类</span></div>
+          <div class="category-meta"><span>数字题 · 序号选择题 · 地名相关题</span><span>可背题或做题</span></div>
+        </button>
+      </section>` : ''}`;
   app.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => {
     const category = button.dataset.category;
     if (mode === 'review' && category === '单选') renderSingleChoiceParts();
     else startSession(mode, category);
+  }));
+  app.querySelector('#reviewTopics')?.addEventListener('click', renderReviewTopics);
+}
+
+function renderReviewTopics() {
+  view = { ...view, screen: 'reviewTopics', mode: 'review', category: null, origin: null, showQuestionStats: false };
+  setHeader(true);
+  const cards = reviewTopics.map(topic => {
+    const items = getCategoryQuestions('review', `专题·${topic.key}`);
+    const summary = summaryFor(items);
+    const percent = items.length ? Math.round(summary.touched / items.length * 100) : 0;
+    return `<button class="category-card" data-review-topic="${escapeHtml(topic.key)}">
+      <div class="category-top"><h3>${escapeHtml(topic.title)}</h3><span class="category-count">${items.length}题</span></div>
+      <div class="category-meta"><span>${escapeHtml(topic.description)}</span><span>已做 ${summary.touched}/${items.length}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">背题模式 · 专题加练</p><h1>集中练易混信息</h1><p>专题只是原题库的额外索引，同一道题仍保留在原六类中；作答记录、收藏、个人解析和备注继续共用。</p></section>
+    <div class="section-title"><div><h2>选择专题</h2><p>可进入后切换“背题”或“做题”</p></div></div>
+    <section class="category-grid">${cards}</section>`;
+  app.querySelectorAll('[data-review-topic]').forEach(button => button.addEventListener('click', () => {
+    startSession('review', `专题·${button.dataset.reviewTopic}`, 'sequential', 'reviewTopic');
   }));
 }
 
@@ -881,6 +914,11 @@ function renderRandomWrongReview(questionNumber) {
 }
 
 function getCategoryQuestions(mode, category) {
+  if (mode === 'review' && category.startsWith('专题·')) {
+    const topic = reviewTopics.find(item => item.key === category.slice(3));
+    const ids = new Set(topic?.question_ids || []);
+    return questions.filter(question => ids.has(question.question_no));
+  }
   const singlePart = mode === 'review' ? SINGLE_CHOICE_REVIEW_PARTS.find(part => part.key === category) : null;
   if (singlePart) {
     return questions.filter(q => q.practice_category === '单选' && q.question_no >= singlePart.start && q.question_no <= singlePart.end);
@@ -1045,7 +1083,7 @@ function renderQuestion() {
       <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span>${shouldShuffleOptions(q) ? '<span class="pill">选项随机</span>' : ''}</div>
       <div class="toolbar-right">
         ${view.mode === 'review' ? `<div class="presentation-toggle" aria-label="背题或做题"><button class="toggle-button ${view.reviewPresentation !== 'quiz' ? 'active' : ''}" data-review-presentation="study">背题</button><button class="toggle-button ${view.reviewPresentation === 'quiz' ? 'active' : ''}" data-review-presentation="quiz">做题</button></div>` : ''}
-        ${['category', 'singleChoicePart'].includes(view.origin) ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
+        ${['category', 'singleChoicePart', 'reviewTopic'].includes(view.origin) ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
       </div>
     </div>
     <article class="question-card">
@@ -1228,8 +1266,10 @@ function goBack() {
   if (view.screen === 'question' && view.origin === 'random') renderRandomSetup();
   else if (view.screen === 'question' && view.origin === 'favorites') renderHome();
   else if (view.screen === 'question' && view.origin === 'singleChoicePart') renderSingleChoiceParts();
+  else if (view.screen === 'question' && view.origin === 'reviewTopic') renderReviewTopics();
   else if (view.screen === 'question') renderCategories(view.mode);
   else if (view.screen === 'singleChoiceParts') renderCategories('review');
+  else if (view.screen === 'reviewTopics') renderCategories('review');
   else if (view.screen === 'randomComplete') renderRandomSetup();
   else if (view.screen === 'randomWrongReview') renderRandomComplete();
   else if (view.screen === 'knowledge') view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub();
@@ -1248,18 +1288,20 @@ dataButton.addEventListener('click', showDataDialog);
 
 async function init() {
   try {
-    const [questionResponse, basicsResponse, computerQuizResponse, powerSystemResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL), fetch(POWER_SYSTEM_BASICS_URL)]);
+    const [questionResponse, basicsResponse, computerQuizResponse, powerSystemResponse, reviewTopicsResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL), fetch(POWER_SYSTEM_BASICS_URL), fetch(REVIEW_TOPICS_URL)]);
     if (!questionResponse.ok) throw new Error(`题库 HTTP ${questionResponse.status}`);
     if (!basicsResponse.ok) throw new Error(`计算机基础 HTTP ${basicsResponse.status}`);
     if (!computerQuizResponse.ok) throw new Error(`计算机测试题库 HTTP ${computerQuizResponse.status}`);
     if (!powerSystemResponse.ok) throw new Error(`电力系统基础 HTTP ${powerSystemResponse.status}`);
-    const [questionPayload, basicsPayload, computerQuizPayload, powerSystemPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json(), powerSystemResponse.json()]);
+    if (!reviewTopicsResponse.ok) throw new Error(`专题索引 HTTP ${reviewTopicsResponse.status}`);
+    const [questionPayload, basicsPayload, computerQuizPayload, powerSystemPayload, reviewTopicsPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json(), powerSystemResponse.json(), reviewTopicsResponse.json()]);
     questions = questionPayload.questions;
     metadata = questionPayload.metadata;
     defaultComputerBasics = basicsPayload.items;
     defaultPowerSystemBasics = powerSystemPayload.items;
     reloadKnowledgeLibraries();
     computerQuizQuestions = computerQuizPayload.questions;
+    reviewTopics = reviewTopicsPayload.topics;
     renderHome();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   } catch (error) {

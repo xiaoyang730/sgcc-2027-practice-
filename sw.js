@@ -1,5 +1,5 @@
-const CACHE = 'sgcc-practice-v18';
-const ASSETS = ['./', './index.html', './styles.css', './app.js', './data/questions.json', './data/computer-basics.json', './data/computer-quiz.json', './data/power-system-basics.json', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'sgcc-practice-v20';
+const ASSETS = ['./', './index.html', './styles.css', './app.js', './data/questions.json', './data/review-topics.json', './data/computer-basics.json', './data/computer-quiz.json', './data/power-system-basics.json', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

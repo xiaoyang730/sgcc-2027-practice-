@@ -3923,7 +3923,7 @@
       "reference_pdf": "2027企业文化-单选.pdf",
       "reference_page": 14,
       "reference_row": 1,
-      "explanation": "⑥和⑦都说的是道路，只能选一个，只有D符合",
+      "explanation": "⑥、⑦同为“道路”，此处取⑥，不取⑦。",
       "explanation_status": "answer_anchored_reviewed_v3",
       "qa_status": "结构及答案双源校验通过",
       "answer_verification": "原始题库与对应分类PDF答案一致",
