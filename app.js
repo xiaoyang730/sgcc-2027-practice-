@@ -51,14 +51,34 @@ let lastSwipeAt = 0;
 function loadProgress() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (stored?.version === 1 && stored.questions) return stored;
+    if (stored?.version === 1 && stored.questions) {
+      if (!Array.isArray(stored.randomSessions)) stored.randomSessions = [];
+      if (!Number.isInteger(stored.nextRandomSessionNumber)) {
+        stored.nextRandomSessionNumber = stored.randomSessions.reduce((max, item) => Math.max(max, Number(item.number) || 0), 0) + 1;
+      }
+      return stored;
+    }
   } catch (_) {}
-  return { version: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), questions: {} };
+  return { version: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), questions: {}, randomSessions: [], nextRandomSessionNumber: 1 };
 }
 
 function saveProgress() {
   progress.updatedAt = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function getRandomSessions() {
+  if (!Array.isArray(progress.randomSessions)) progress.randomSessions = [];
+  return progress.randomSessions;
+}
+
+function findRandomSession(id) {
+  return getRandomSessions().find(item => item.id === id);
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
 }
 
 function normalizeKnowledgeItems(items, defaultItems = []) {
@@ -226,7 +246,7 @@ function renderHome() {
   app.querySelector('#computerBasics')?.addEventListener('click', renderComputerHub);
   app.querySelector('#powerSystemBasics')?.addEventListener('click', renderPowerSystemHub);
   app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
-  app.querySelector('#favoriteQuestions')?.addEventListener('click', startFavoriteSession);
+  app.querySelector('#favoriteQuestions')?.addEventListener('click', renderFavoriteCategories);
 }
 
 function getComputerRecord(id) {
@@ -718,6 +738,8 @@ function renderRandomSetup() {
   view = { ...view, screen: 'randomSetup', mode: 'practice', category: '随机组卷', origin: 'random', session: [], index: 0, selected: new Set(), answered: false, sessionResults: {} };
   setHeader(true);
   const scopeOptions = ['全部题库', ...PRACTICE_CATEGORY_ORDER].map(scope => `<option value="${scope}" ${view.randomScope === scope ? 'selected' : ''}>${scope}</option>`).join('');
+  const randomSessions = getRandomSessions();
+  const unfinishedCount = randomSessions.filter(item => item.status === 'in_progress').length;
   app.innerHTML = `
     <section class="hero"><p class="eyebrow">随机刷题</p><h1>自己设置这一组刷多少题</h1><p>从所选范围内无重复随机抽取。选择全部题库时按题型比例组卷，并按单选、多选、判断的顺序作答。</p></section>
     <div class="section-title"><div><h2>组卷设置</h2><p>最多 ${questions.length} 题</p></div></div>
@@ -733,7 +755,9 @@ function renderRandomSetup() {
         ${[10, 20, 30, 50, 100, 200].map(count => `<button class="preset-button" data-random-count="${count}">${count}题</button>`).join('')}
       </div>
       <p id="randomLimit" class="random-note">全部题库可抽取 ${questions.length} 题。</p>
-    </section>`;
+    </section>
+    <div class="section-title"><div><h2>答题记录</h2><p>${unfinishedCount ? `${unfinishedCount}组尚未完成` : '可查看历次成绩与错题'}</p></div></div>
+    <section class="panel"><button id="randomHistory" class="button button-secondary full-width-button">查看随机刷题记录（${randomSessions.length}组）</button></section>`;
   const scopeSelect = app.querySelector('#randomScope');
   const countInput = app.querySelector('#randomCount');
   const limitText = app.querySelector('#randomLimit');
@@ -755,7 +779,32 @@ function renderRandomSetup() {
     updateLimit();
   }));
   app.querySelector('#startRandom').addEventListener('click', () => startRandomSession(scopeSelect.value, Number(countInput.value)));
+  app.querySelector('#randomHistory').addEventListener('click', renderRandomHistory);
   updateLimit();
+}
+
+function renderRandomHistory() {
+  view = { ...view, screen: 'randomHistory', origin: 'randomHistory', session: [], selected: new Set(), answered: false };
+  setHeader(true);
+  const sessions = [...getRandomSessions()].sort((a, b) => (b.number || 0) - (a.number || 0));
+  const rows = sessions.map(item => {
+    const answered = Object.values(item.answers || {}).filter(answer => Array.isArray(answer) && answer.length).length;
+    const completed = item.status === 'completed';
+    const detail = completed
+      ? `正确率 ${item.accuracy || 0}% · 错${item.wrong || 0}题`
+      : `进行中 · 已答 ${answered}/${item.questionIds?.length || item.requestedCount || 0}`;
+    return `<button class="history-card ${completed ? '' : 'history-card-active'}" data-random-history="${escapeHtml(item.id)}">
+      <div class="history-card-top"><strong>第${item.number}组</strong><span class="pill">${completed ? '已完成' : '进行中'}</span></div>
+      <p>${escapeHtml(item.scope)} · ${item.requestedCount}题</p>
+      <div class="category-meta"><span>${detail}</span><span>${formatDateTime(item.completedAt || item.updatedAt || item.createdAt)}</span></div>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">随机刷题记录</p><h1>继续未完成题组，复盘历次错题</h1><p>题组记录保存在当前浏览器，并随“导出全部记录”一起备份。</p></section>
+    <section class="history-list">${rows || '<div class="panel empty">还没有随机刷题记录。</div>'}</section>
+    <section class="panel"><button id="newRandomSession" class="button button-primary full-width-button">新建随机题组</button></section>`;
+  app.querySelectorAll('[data-random-history]').forEach(button => button.addEventListener('click', () => openRandomSession(button.dataset.randomHistory)));
+  app.querySelector('#newRandomSession').addEventListener('click', renderRandomSetup);
 }
 
 function getRandomPool(scope) {
@@ -810,9 +859,60 @@ function startRandomSession(scope, requestedCount) {
     return;
   }
   const session = buildRandomSession(scope, requestedCount);
-  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, showQuestionStats: false, optionOrders: {}, randomScope: scope, randomCount: requestedCount, sessionAnswers: {}, sessionResults: {}, randomFinalized: false };
+  const number = progress.nextRandomSessionNumber || 1;
+  const id = `random-${number}`;
+  progress.nextRandomSessionNumber = number + 1;
+  const now = new Date().toISOString();
+  getRandomSessions().push({
+    id, number, status: 'in_progress', scope, requestedCount,
+    questionIds: session.map(question => question.question_no), currentIndex: 0,
+    answers: {}, optionOrders: {}, createdAt: now, updatedAt: now,
+  });
+  saveProgress();
+  view = { screen: 'question', mode: 'practice', category: scope === '全部题库' ? '随机组卷' : `随机·${scope}`, origin: 'random', order: 'random', index: 0, session, selected: new Set(), answered: false, correct: false, showQuestionStats: false, optionOrders: {}, randomScope: scope, randomCount: requestedCount, randomSessionId: id, sessionAnswers: {}, sessionResults: {}, randomFinalized: false, randomHistoryMode: false };
   setHeader(true);
   renderQuestion();
+}
+
+function persistRandomDraft() {
+  if (view.origin !== 'random' || !view.randomSessionId || view.randomFinalized) return;
+  const item = findRandomSession(view.randomSessionId);
+  if (!item || item.status !== 'in_progress') return;
+  item.currentIndex = view.index;
+  item.answers = Object.fromEntries(Object.entries(view.sessionAnswers || {}).map(([key, value]) => [key, [...value]]));
+  item.optionOrders = Object.fromEntries(Object.entries(view.optionOrders || {}).map(([key, value]) => [key, [...value]]));
+  item.updatedAt = new Date().toISOString();
+  saveProgress();
+}
+
+function openRandomSession(id) {
+  const item = findRandomSession(id);
+  if (!item) {
+    showToast('未找到这组记录');
+    renderRandomHistory();
+    return;
+  }
+  const byId = new Map(questions.map(question => [question.question_no, question]));
+  const session = (item.questionIds || []).map(number => byId.get(number)).filter(Boolean);
+  if (!session.length) {
+    showToast('这组题目无法恢复');
+    return;
+  }
+  view = {
+    screen: item.status === 'completed' ? 'randomComplete' : 'question',
+    mode: 'practice', category: item.scope === '全部题库' ? '随机组卷' : `随机·${item.scope}`,
+    origin: 'random', order: 'random', index: Math.min(item.currentIndex || 0, session.length - 1), session,
+    selected: new Set(), answered: false, correct: false, showQuestionStats: false,
+    optionOrders: { ...(item.optionOrders || {}) }, randomScope: item.scope, randomCount: item.requestedCount,
+    randomSessionId: item.id, sessionAnswers: { ...(item.answers || {}) }, sessionResults: { ...(item.results || {}) },
+    randomFinalized: item.status === 'completed', randomHistoryMode: item.status === 'completed',
+  };
+  if (item.status === 'completed') renderRandomComplete();
+  else {
+    view.selected = new Set(view.sessionAnswers[String(view.session[view.index].question_no)] || []);
+    setHeader(true);
+    renderQuestion();
+  }
 }
 
 function isChosenAnswerCorrect(question, chosenAnswer) {
@@ -840,6 +940,20 @@ function finalizeRandomSession() {
   }
   view.sessionResults = results;
   view.randomFinalized = true;
+  const correct = Object.values(results).filter(Boolean).length;
+  const item = findRandomSession(view.randomSessionId);
+  if (item) {
+    item.status = 'completed';
+    item.answers = Object.fromEntries(Object.entries(view.sessionAnswers || {}).map(([key, value]) => [key, [...value]]));
+    item.optionOrders = Object.fromEntries(Object.entries(view.optionOrders || {}).map(([key, value]) => [key, [...value]]));
+    item.results = { ...results };
+    item.correct = correct;
+    item.wrong = view.session.length - correct;
+    item.accuracy = view.session.length ? Math.round(correct / view.session.length * 100) : 0;
+    item.currentIndex = view.index;
+    item.completedAt = new Date().toISOString();
+    item.updatedAt = item.completedAt;
+  }
   saveProgress();
 }
 
@@ -854,17 +968,18 @@ function renderRandomComplete() {
   const unanswered = view.session.length - answered;
   const accuracy = view.session.length ? Math.round(correct / view.session.length * 100) : 0;
   const wrongQuestions = view.session.filter(question => view.sessionResults?.[String(question.question_no)] === false);
+  const randomRecord = findRandomSession(view.randomSessionId);
   const wrongList = wrongQuestions.map(question => `<button class="stat-row random-wrong-row" data-random-wrong="${question.question_no}">
     <strong>第${question.question_no}题</strong><div><span>${question.question_type}</span><small>点击查看你的选择、正确答案和解析</small></div><div class="stat-value">查看</div>
   </button>`).join('');
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">本组完成</p><h1>${correct}/${view.session.length || 0} 题正确</h1><p>整体正确率 ${accuracy}%，答错 ${wrong} 题${unanswered ? `，未作答 ${unanswered} 题` : ''}。本轮结果已统一计入个人统计。</p></section>
+    <section class="hero"><p class="eyebrow">第${randomRecord?.number || '-'}组 · 本组完成</p><h1>${correct}/${view.session.length || 0} 题正确</h1><p>${escapeHtml(view.randomScope)} · ${view.session.length}题；整体正确率 ${accuracy}%，答错 ${wrong} 题${unanswered ? `，未作答 ${unanswered} 题` : ''}。本轮结果已统一计入个人统计。</p></section>
     <section class="summary-grid"><article class="summary-card"><strong>${view.session.length}</strong><span>本组题数</span></article><article class="summary-card"><strong>${correct}</strong><span>回答正确</span></article><article class="summary-card"><strong>${wrong}</strong><span>回答错误</span></article></section>
     <div class="section-title"><div><h2>本轮错题</h2><p>先看题号，点击后单题复盘</p></div></div>
     <section class="stats-list random-wrong-list">${wrongList || '<div class="panel empty">本轮没有错题。</div>'}</section>
-    <section class="panel"><div class="actions"><button id="randomSettings" class="button button-secondary">修改设置</button><button id="randomAgain" class="button button-primary">同样设置再来一组</button></div></section>`;
+    <section class="panel"><div class="actions"><button id="randomSettings" class="button button-secondary">${view.randomHistoryMode ? '返回历史记录' : '查看全部记录'}</button><button id="randomAgain" class="button button-primary">同样设置再来一组</button></div></section>`;
   app.querySelectorAll('[data-random-wrong]').forEach(button => button.addEventListener('click', () => renderRandomWrongReview(Number(button.dataset.randomWrong))));
-  app.querySelector('#randomSettings').addEventListener('click', renderRandomSetup);
+  app.querySelector('#randomSettings').addEventListener('click', renderRandomHistory);
   app.querySelector('#randomAgain').addEventListener('click', () => startRandomSession(view.randomScope, view.randomCount));
 }
 
@@ -943,9 +1058,26 @@ function startSession(mode, category, order = mode === 'practice' ? 'smart' : 's
   renderQuestion();
 }
 
-function startFavoriteSession() {
-  const items = questions.filter(q => getRecord(q.question_no).favorite).sort((a, b) => a.question_no - b.question_no);
-  view = { screen: 'question', mode: 'review', category: '我的收藏', origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', showQuestionStats: false, optionOrders: {}, sessionResults: {} };
+function renderFavoriteCategories() {
+  view = { ...view, screen: 'favoriteCategories', mode: 'review', category: '我的收藏', origin: 'favorites', showQuestionStats: false };
+  setHeader(true);
+  const cards = PRACTICE_CATEGORY_ORDER.map(type => {
+    const items = questions.filter(question => question.question_type === type && getRecord(question.question_no).favorite);
+    const summary = summaryFor(items);
+    return `<button class="category-card" data-favorite-type="${type}" ${items.length ? '' : 'disabled'}>
+      <div class="category-top"><h3>${type}</h3><span class="category-count">${items.length}题</span></div>
+      <div class="category-meta"><span>${items.length ? '按原题号顺序查看' : '暂无收藏'}</span><span>正确率 ${summary.accuracy}%</span></div>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">我的收藏</p><h1>按基础题型分类复习</h1><p>单选、多选和判断分别进入；收藏状态、答题统计、个人解析和备注保持共用。</p></section>
+    <section class="category-grid">${cards}</section>`;
+  app.querySelectorAll('[data-favorite-type]').forEach(button => button.addEventListener('click', () => startFavoriteSession(button.dataset.favoriteType)));
+}
+
+function startFavoriteSession(type) {
+  const items = questions.filter(q => q.question_type === type && getRecord(q.question_no).favorite).sort((a, b) => a.question_no - b.question_no);
+  view = { screen: 'question', mode: 'review', category: `收藏·${type}`, origin: 'favorites', order: 'sequential', index: 0, session: items, selected: new Set(), answered: false, correct: false, reviewPresentation: 'study', showQuestionStats: false, optionOrders: {}, sessionResults: {} };
   setHeader(true);
   renderQuestion();
 }
@@ -1038,6 +1170,7 @@ function renderQuestion() {
     view.lastViewedQuestion = q.question_no;
   }
   const r = getRecord(q.question_no);
+  const randomRecord = view.origin === 'random' ? findRandomSession(view.randomSessionId) : null;
   if (view.origin === 'random') {
     const savedSelection = view.sessionAnswers?.[String(q.question_no)] || [];
     if (!view.selected.size && savedSelection.length) view.selected = new Set(savedSelection);
@@ -1048,6 +1181,7 @@ function renderQuestion() {
   const displayExplanation = (r.customExplanation || '').trim() || originalExplanation;
   const personalNote = (r.note || '').trim();
   const displayOptions = getDisplayOptions(q, 'public');
+  if (view.origin === 'random') persistRandomDraft();
   const displayedAnswer = getDisplayedAnswer(q, displayOptions);
   const options = displayOptions.map(({ displayLetter, originalLetter, text }) => {
     const selected = view.selected.has(originalLetter);
@@ -1065,11 +1199,14 @@ function renderQuestion() {
     ${personalNote ? `<div class="personal-note"><strong>我的备注／口诀</strong><p>${escapeHtml(personalNote).replace(/\n/g, '<br>')}</p></div>` : ''}
   </div>` : '';
   const hasSavedRandomAnswer = view.origin === 'random' && Boolean(view.sessionAnswers?.[String(q.question_no)]?.length);
-  const needsSubmitButton = practicePresentation && q.answer_count > 1 && !view.answered;
+  const needsSubmitButton = view.origin !== 'random' && practicePresentation && q.answer_count > 1 && !view.answered;
+  const randomAnswerSaved = view.origin === 'random' && Boolean(view.sessionAnswers?.[String(q.question_no)]?.length);
+  const randomNavigation = view.origin === 'random' ? `<div class="random-question-nav">
+    <button id="previousRandomQuestion" class="button button-secondary" ${view.index === 0 ? 'disabled' : ''}>上一题</button>
+    <button id="nextRandomQuestion" class="button button-primary" ${randomAnswerSaved ? '' : 'disabled'}>${view.index === view.session.length - 1 ? '提交本轮并批改' : '下一题'}</button>
+  </div>` : '';
   const gestureHint = view.origin === 'random'
-    ? q.answer_count === 1
-      ? '点击选项后自动进入下一题 · 本轮结束后统一判分'
-      : '选择所有答案并提交 · 本轮结束后统一判分'
+    ? '选择答案后手动翻题 · 提交整轮前可返回修改'
     : !practicePresentation
     ? '左滑下一题 · 右滑上一题'
     : view.answered
@@ -1080,7 +1217,7 @@ function renderQuestion() {
   const modeLabel = view.mode === 'review' ? (view.reviewPresentation === 'quiz' ? '做题' : '背题') : '刷题';
   app.innerHTML = `
     <div class="toolbar">
-      <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span><span class="pill">${view.index + 1}/${view.session.length}</span>${shouldShuffleOptions(q) ? '<span class="pill">选项随机</span>' : ''}</div>
+      <div class="toolbar-left"><span class="pill">${modeLabel} · ${view.category}</span>${randomRecord ? `<span class="pill">第${randomRecord.number}组</span>` : ''}<span class="pill">${view.index + 1}/${view.session.length}</span>${shouldShuffleOptions(q) ? '<span class="pill">选项随机</span>' : ''}</div>
       <div class="toolbar-right">
         ${view.mode === 'review' ? `<div class="presentation-toggle" aria-label="背题或做题"><button class="toggle-button ${view.reviewPresentation !== 'quiz' ? 'active' : ''}" data-review-presentation="study">背题</button><button class="toggle-button ${view.reviewPresentation === 'quiz' ? 'active' : ''}" data-review-presentation="quiz">做题</button></div>` : ''}
         ${['category', 'singleChoicePart', 'reviewTopic'].includes(view.origin) ? `<select id="orderSelect" class="select" aria-label="题目顺序"><option value="smart" ${view.order === 'smart' ? 'selected' : ''}>智能顺序</option><option value="sequential" ${view.order === 'sequential' ? 'selected' : ''}>题号顺序</option><option value="random" ${view.order === 'random' ? 'selected' : ''}>随机顺序</option></select>` : ''}
@@ -1093,6 +1230,7 @@ function renderQuestion() {
       <div class="options">${options}</div>
       ${answerBox}
       ${needsSubmitButton ? `<div class="actions single-action"><button id="submitAnswer" class="button button-primary" ${view.selected.size ? '' : 'disabled'}>${hasSavedRandomAnswer ? '更新答案并继续' : '提交答案'}</button></div>` : ''}
+      ${randomNavigation}
       <p class="gesture-hint">${gestureHint}</p>
     </article>`;
   app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => toggleOption(button.dataset.option)));
@@ -1102,12 +1240,25 @@ function renderQuestion() {
   app.querySelector('#toggleQuestionStats').addEventListener('click', toggleQuestionStats);
   app.querySelector('#editQuestion').addEventListener('click', showQuestionEditor);
   app.querySelector('#orderSelect')?.addEventListener('change', event => startSession(view.mode, view.category, event.target.value, view.origin));
-  bindSwipeNavigation(app.querySelector('.question-card'));
+  app.querySelector('#previousRandomQuestion')?.addEventListener('click', previousRandomQuestion);
+  app.querySelector('#nextRandomQuestion')?.addEventListener('click', () => view.index === view.session.length - 1 ? submitRandomRound() : nextRandomQuestion());
+  if (view.origin !== 'random') bindSwipeNavigation(app.querySelector('.question-card'));
 }
 
 function toggleOption(letter) {
   if (Date.now() - lastSwipeAt < 400 || view.answered || !isQuestionPractice()) return;
   const q = view.session[view.index];
+  if (view.origin === 'random') {
+    if (q.answer_count === 1) view.selected = new Set([letter]);
+    else if (view.selected.has(letter)) view.selected.delete(letter);
+    else view.selected.add(letter);
+    const key = String(q.question_no);
+    if (view.selected.size) view.sessionAnswers[key] = [...view.selected].sort();
+    else delete view.sessionAnswers[key];
+    persistRandomDraft();
+    renderQuestion();
+    return;
+  }
   if (q.answer_count === 1) {
     view.selected = new Set([letter]);
     submitAnswer();
@@ -1122,12 +1273,6 @@ function submitAnswer() {
   if (Date.now() - lastSwipeAt < 400 || view.answered || !view.selected.size) return;
   const q = view.session[view.index];
   const chosen = [...view.selected].sort();
-  if (view.origin === 'random') {
-    if (!view.sessionAnswers) view.sessionAnswers = {};
-    view.sessionAnswers[String(q.question_no)] = chosen;
-    advanceRandomAfterAnswer();
-    return;
-  }
   const correct = chosen.length === q.answer.length && chosen.every((item, index) => item === [...q.answer].sort()[index]);
   const r = getRecord(q.question_no);
   r.attempts += 1;
@@ -1142,19 +1287,42 @@ function submitAnswer() {
   renderQuestion();
 }
 
-function advanceRandomAfterAnswer() {
+function nextRandomQuestion() {
+  const current = view.session[view.index];
+  if (!view.sessionAnswers?.[String(current.question_no)]?.length) {
+    showToast('请先选择本题答案');
+    return;
+  }
+  if (view.index >= view.session.length - 1) return;
+  view.index += 1;
+  view.selected = new Set(view.sessionAnswers?.[String(view.session[view.index].question_no)] || []);
+  persistRandomDraft();
+  renderQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function previousRandomQuestion() {
+  if (view.index <= 0) return;
+  view.index -= 1;
+  view.selected = new Set(view.sessionAnswers?.[String(view.session[view.index].question_no)] || []);
+  persistRandomDraft();
+  renderQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function submitRandomRound() {
   const unansweredIndex = view.session.findIndex(question => !view.sessionAnswers?.[String(question.question_no)]?.length);
-  if (unansweredIndex < 0) {
-    renderRandomComplete();
+  if (unansweredIndex >= 0) {
+    const missing = view.session.filter(question => !view.sessionAnswers?.[String(question.question_no)]?.length).length;
+    view.index = unansweredIndex;
+    view.selected = new Set();
+    persistRandomDraft();
+    renderQuestion();
+    showToast(`还有${missing}题未作答`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
-  if (view.index < view.session.length - 1) view.index += 1;
-  else view.index = unansweredIndex;
-  view.selected = new Set(view.sessionAnswers?.[String(view.session[view.index].question_no)] || []);
-  view.answered = false;
-  view.correct = false;
-  renderQuestion();
+  renderRandomComplete();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1232,7 +1400,7 @@ function showDataDialog() {
   if (existing) existing.remove();
   const dialog = document.createElement('dialog');
   dialog.id = 'dataDialog';
-  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题记录、收藏、个人解析、备注以及两个知识模块的修改和新增内容，都只保存在当前浏览器。建议偶尔导出备份；导入会替换当前浏览器记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出全部记录</button><button id="importData" class="button button-secondary">导入全部记录</button><button id="resetData" class="button button-danger">清空记录并恢复知识点</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
+  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题统计、收藏、随机题组及历史、个人解析、备注以及两个知识模块的修改和新增内容，都只保存在当前浏览器。建议偶尔导出备份；导入会替换当前浏览器记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出全部记录</button><button id="importData" class="button button-secondary">导入全部记录</button><button id="resetData" class="button button-danger">清空记录并恢复知识点</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
   document.body.appendChild(dialog); dialog.showModal();
   dialog.querySelector('#closeDialog').onclick = () => dialog.close();
   dialog.querySelector('#exportData').onclick = exportData;
@@ -1257,20 +1425,24 @@ importInput.addEventListener('change', async event => {
   try {
     const imported = JSON.parse(await file.text());
     if (imported?.version !== 1 || !imported.questions) throw new Error('格式不正确');
-    progress = imported; saveProgress(); reloadKnowledgeLibraries(); showToast('学习记录和知识点已恢复'); renderHome();
+    if (!Array.isArray(imported.randomSessions)) imported.randomSessions = [];
+    if (!Number.isInteger(imported.nextRandomSessionNumber)) imported.nextRandomSessionNumber = imported.randomSessions.reduce((max, item) => Math.max(max, Number(item.number) || 0), 0) + 1;
+    progress = imported; saveProgress(); reloadKnowledgeLibraries(); showToast('学习记录、随机题组和知识点已恢复'); renderHome();
   } catch (_) { alert('无法导入：文件格式不正确。'); }
   event.target.value = '';
 });
 
 function goBack() {
   if (view.screen === 'question' && view.origin === 'random') renderRandomSetup();
-  else if (view.screen === 'question' && view.origin === 'favorites') renderHome();
+  else if (view.screen === 'question' && view.origin === 'favorites') renderFavoriteCategories();
   else if (view.screen === 'question' && view.origin === 'singleChoicePart') renderSingleChoiceParts();
   else if (view.screen === 'question' && view.origin === 'reviewTopic') renderReviewTopics();
   else if (view.screen === 'question') renderCategories(view.mode);
   else if (view.screen === 'singleChoiceParts') renderCategories('review');
   else if (view.screen === 'reviewTopics') renderCategories('review');
-  else if (view.screen === 'randomComplete') renderRandomSetup();
+  else if (view.screen === 'favoriteCategories') renderHome();
+  else if (view.screen === 'randomHistory') renderRandomSetup();
+  else if (view.screen === 'randomComplete') renderRandomHistory();
   else if (view.screen === 'randomWrongReview') renderRandomComplete();
   else if (view.screen === 'knowledge') view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub();
   else if (view.screen === 'computerQuizSetup') renderComputerHub();

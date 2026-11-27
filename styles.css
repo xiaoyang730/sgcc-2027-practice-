@@ -61,6 +61,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; }
 .category-card { padding: 16px; text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--ink); }
 .category-card:hover { border-color: #8fc5be; }
+.category-card:disabled { cursor: not-allowed; opacity: .55; }
 .category-top { display: flex; justify-content: space-between; gap: 10px; }
 .category-card h3 { margin: 0; font-size: 16px; }
 .category-count { color: var(--primary); font-size: 12px; font-weight: 700; }
@@ -80,6 +81,13 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .preset-button { min-height: 38px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); color: var(--primary-dark); font-weight: 700; }
 .preset-button:hover { border-color: var(--primary); }
 .random-note { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.full-width-button { width: 100%; }
+.history-list { display: grid; gap: 10px; margin-bottom: 14px; }
+.history-card { width: 100%; padding: 16px; text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.history-card:hover { border-color: #8fc5be; }
+.history-card-active { border-color: #e1b94f; background: #fffaf0; }
+.history-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-card p { margin: 8px 0 0; font-size: 14px; font-weight: 700; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pill { display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border-radius: 999px; background: var(--surface-soft); color: var(--primary-dark); font-size: 12px; font-weight: 700; }
@@ -122,6 +130,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 
 .actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 16px; }
 .actions.single-action { grid-template-columns: 1fr; }
+.random-question-nav { display: grid; grid-template-columns: 1fr 1.45fr; gap: 10px; margin-top: 16px; }
 .gesture-hint { margin: 16px 0 0; text-align: center; color: var(--muted); font-size: 12px; letter-spacing: .02em; }
 .knowledge-card h2 { margin: 0 0 18px; font-size: 24px; line-height: 1.35; }
 .knowledge-content { color: var(--ink); font-size: 15px; line-height: 1.75; }
@@ -196,4 +205,5 @@ dialog::backdrop { background: rgba(13,32,29,.45); backdrop-filter: blur(3px); }
   .question-head { display: grid; }
   .question-tools { justify-content: flex-start; }
   .random-controls { grid-template-columns: 1fr; }
+  .random-question-nav { grid-template-columns: 1fr 1.35fr; }
 }
