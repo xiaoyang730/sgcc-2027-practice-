@@ -692,7 +692,7 @@
       "id": 58,
       "stableId": "MATH-058",
       "uid": "math-source-58",
-      "title": "互斥是交集为0，对立是在此基础上相加规律为1",
+      "title": "互斥是交集为0，对立（互逆）是在此基础上相加规律为1",
       "content": "",
       "subject": "probability-statistics",
       "chapter": "probability-statistics-1"
