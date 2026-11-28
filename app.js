@@ -1,7 +1,8 @@
 const DATA_URL = './data/questions.json?v=20';
-const COMPUTER_BASICS_URL = './data/computer-basics.json?v=22';
+const COMPUTER_BASICS_URL = './data/computer-basics.json?v=23';
 const COMPUTER_QUIZ_URL = './data/computer-quiz.json';
-const POWER_SYSTEM_BASICS_URL = './data/power-system-basics.json?v=22';
+const POWER_SYSTEM_BASICS_URL = './data/power-system-basics.json?v=23';
+const MATH_BASICS_URL = './data/math-basics.json?v=23';
 const REVIEW_TOPICS_URL = './data/review-topics.json';
 const STORAGE_KEY = 'sgcc-question-progress-v1';
 const REVIEW_CATEGORY_ORDER = ['单选', '多选两选', '多选三选', '多选全选', '判断对', '判断错'];
@@ -59,6 +60,8 @@ let defaultComputerBasics = [];
 let defaultPowerSystemBasics = [];
 let computerBasics = [];
 let powerSystemBasics = [];
+let mathBasics = [];
+let mathSubjects = [];
 let computerQuizQuestions = [];
 let reviewTopics = [];
 let progress = loadProgress();
@@ -98,12 +101,17 @@ function formatDateTime(value) {
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
 }
 
-function getKnowledgeChapters(moduleKey) {
+function getKnowledgeSubject(subjectKey) {
+  return mathSubjects.find(subject => subject.key === subjectKey) || mathSubjects[0];
+}
+
+function getKnowledgeChapters(moduleKey, subjectKey = null) {
+  if (moduleKey === 'math') return getKnowledgeSubject(subjectKey)?.chapters || [];
   return KNOWLEDGE_CHAPTERS[moduleKey] || [];
 }
 
-function getKnowledgeChapter(moduleKey, chapterKey) {
-  return getKnowledgeChapters(moduleKey).find(chapter => chapter.key === chapterKey) || getKnowledgeChapters(moduleKey)[0];
+function getKnowledgeChapter(moduleKey, chapterKey, subjectKey = null) {
+  return getKnowledgeChapters(moduleKey, subjectKey).find(chapter => chapter.key === chapterKey) || getKnowledgeChapters(moduleKey, subjectKey)[0];
 }
 
 function legacyKnowledgeUid(moduleKey, index, title, content) {
@@ -171,8 +179,8 @@ function loadKnowledgeLibrary(key, defaultItems) {
 }
 
 function reloadKnowledgeLibraries() {
-  computerBasics = loadKnowledgeLibrary('computer', defaultComputerBasics);
-  powerSystemBasics = loadKnowledgeLibrary('powerSystem', defaultPowerSystemBasics);
+  computerBasics = normalizeKnowledgeItems(defaultComputerBasics.map((item, index) => ({ ...item, id: index + 1, sourceId: item.id, custom: false })), defaultComputerBasics, 'computer');
+  powerSystemBasics = normalizeKnowledgeItems(defaultPowerSystemBasics.map((item, index) => ({ ...item, id: index + 1, sourceId: item.id, custom: false })), defaultPowerSystemBasics, 'powerSystem');
 }
 
 function saveKnowledgeLibrary(key, items) {
@@ -294,11 +302,15 @@ function renderHome() {
       </button>
       <button class="mode-card" id="computerBasics">
         <span class="mode-icon">机</span><h3>计算机基础（${computerBasics.length}条）</h3>
-        <p>按5章逐条学习并随机测试；支持修改、新增、删除和调整章节。</p>
+        <p>按5章逐条学习并随机测试；知识点由桌面TXT统一同步。</p>
       </button>
       <button class="mode-card" id="powerSystemBasics">
         <span class="mode-icon">系</span><h3>电力系统基础（${powerSystemBasics.length}条）</h3>
-        <p>原有76条资料按6章学习；支持修改、新增、删除和调整章节。</p>
+        <p>原有76条资料按6章逐条学习；知识点由桌面TXT统一同步。</p>
+      </button>
+      <button class="mode-card" id="mathBasics">
+        <span class="mode-icon">数</span><h3>数学基础（${mathBasics.length}条）</h3>
+        <p>按4个学科、23个章节逐条学习；保留桌面TXT原有内容。</p>
       </button>
     </section>
     <div class="section-title"><div><h2>快速入口</h2><p>按错误频率优先</p></div></div>
@@ -313,6 +325,7 @@ function renderHome() {
   app.querySelector('#randomQuiz')?.addEventListener('click', renderRandomSetup);
   app.querySelector('#computerBasics')?.addEventListener('click', renderComputerHub);
   app.querySelector('#powerSystemBasics')?.addEventListener('click', renderPowerSystemHub);
+  app.querySelector('#mathBasics')?.addEventListener('click', renderMathSubjects);
   app.querySelector('#focusPractice')?.addEventListener('click', startFocusPractice);
   app.querySelector('#favoriteQuestions')?.addEventListener('click', renderFavoriteCategories);
 }
@@ -338,7 +351,7 @@ function renderComputerHub() {
   setHeader(true);
   const summary = computerQuizSummary();
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">计算机基础专项</p><h1>分章节学习，再随机检验</h1><p>当前共${computerBasics.length}条，知识点分为5章；支持修改、新增、删除和调整所属章节。随机测试仍依据原始57条题库。</p></section>
+    <section class="hero"><p class="eyebrow">计算机基础专项</p><h1>分章节学习，再随机检验</h1><p>当前共${computerBasics.length}条，知识点分为5章；网站只读，内容由桌面TXT统一同步。随机测试仍依据原始57条题库。</p></section>
     <section class="mode-grid computer-mode-grid">
       <button class="mode-card" id="computerStudy">
         <span class="mode-icon">学</span><h3>知识点学习</h3>
@@ -357,14 +370,34 @@ function renderPowerSystemHub() {
   view = { ...view, screen: 'powerSystemHub', selected: new Set(), answered: false };
   setHeader(true);
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">电力系统基础专项</p><h1>分章节掌握电力系统基础</h1><p>当前共${powerSystemBasics.length}条，知识点分为6章；支持修改、新增、删除和调整所属章节。含“待核对”的原始标记。</p></section>
+    <section class="hero"><p class="eyebrow">电力系统基础专项</p><h1>分章节掌握电力系统基础</h1><p>当前共${powerSystemBasics.length}条，知识点分为6章；网站只读，内容由桌面TXT统一同步。含“待核对”的原始标记。</p></section>
     <section class="mode-grid computer-mode-grid">
       <button class="mode-card" id="powerSystemStudy">
         <span class="mode-icon">学</span><h3>知识点学习</h3>
-        <p>先选择章节，再逐条学习；本地修改会按稳定编号迁移。</p>
+        <p>先选择章节，再使用“上一条／下一条”逐条学习。</p>
       </button>
     </section>`;
   app.querySelector('#powerSystemStudy').addEventListener('click', () => renderKnowledgeChapters('powerSystem'));
+}
+
+function renderMathSubjects() {
+  view = { ...view, screen: 'mathSubjects', knowledgeModule: 'math', knowledgeSubject: null, knowledgeChapter: null, knowledgeChapterIndex: 0 };
+  setHeader(true);
+  const cards = mathSubjects.map(subject => {
+    const count = mathBasics.filter(item => item.subject === subject.key).length;
+    const chapterCount = subject.chapters.length;
+    return `<button class="category-card knowledge-chapter-card" data-math-subject="${subject.key}" ${count ? '' : 'disabled'}>
+      <div class="category-top"><h3>${escapeHtml(subject.label)}</h3><span class="category-count">${count}条</span></div>
+      <p class="knowledge-chapter-description">${chapterCount}个章节</p>
+    </button>`;
+  }).join('');
+  app.innerHTML = `
+    <section class="hero"><p class="eyebrow">数学基础</p><h1>先选学科，再选章节</h1><p>共${mathBasics.length}条，按4个学科、23个章节整理；网站只读，内容由桌面“数学.txt”同步。</p></section>
+    <div class="section-title"><div><h2>4个学科</h2><p>空章节会保留，并在章节页显示为0条</p></div></div>
+    <section class="category-grid knowledge-chapter-grid">${cards}</section>`;
+  app.querySelectorAll('[data-math-subject]').forEach(button => button.addEventListener('click', () => {
+    renderKnowledgeChapters('math', button.dataset.mathSubject);
+  }));
 }
 
 function renderKnowledgeInline(text = '') {
@@ -417,6 +450,14 @@ function renderKnowledgeContent(markdown = '') {
 }
 
 function getKnowledgeModule(moduleKey) {
+  if (moduleKey === 'math') {
+    return {
+      key: 'math',
+      label: '数学基础',
+      items: mathBasics,
+      defaults: mathBasics,
+    };
+  }
   if (moduleKey === 'powerSystem') {
     return {
       key: 'powerSystem',
@@ -433,10 +474,15 @@ function getKnowledgeModule(moduleKey) {
   };
 }
 
-function renderKnowledgeChapters(moduleKey = 'computer') {
+function renderKnowledgeChapters(moduleKey = 'computer', subjectKey = null) {
+  if (moduleKey === 'math' && !subjectKey) {
+    renderMathSubjects();
+    return;
+  }
   const module = getKnowledgeModule(moduleKey);
-  const chapters = getKnowledgeChapters(moduleKey);
-  view = { ...view, screen: 'knowledgeChapters', knowledgeModule: moduleKey, knowledgeChapter: null, knowledgeChapterIndex: 0 };
+  const subject = moduleKey === 'math' ? getKnowledgeSubject(subjectKey) : null;
+  const chapters = getKnowledgeChapters(moduleKey, subject?.key);
+  view = { ...view, screen: 'knowledgeChapters', knowledgeModule: moduleKey, knowledgeSubject: subject?.key || null, knowledgeChapter: null, knowledgeChapterIndex: 0 };
   setHeader(true);
   const cards = chapters.map(chapter => {
     const count = module.items.filter(item => item.chapter === chapter.key).length;
@@ -446,48 +492,41 @@ function renderKnowledgeChapters(moduleKey = 'computer') {
     </button>`;
   }).join('');
   app.innerHTML = `
-    <section class="hero"><p class="eyebrow">${module.label}</p><h1>选择学习章节</h1><p>共${module.items.length}条；新增知识点默认归入当前章节，也可以在编辑时调整章节。</p></section>
+    <section class="hero"><p class="eyebrow">${module.label}${subject ? ` · ${escapeHtml(subject.label)}` : ''}</p><h1>选择学习章节</h1><p>${subject ? `本学科共${module.items.filter(item => item.subject === subject.key).length}条` : `共${module.items.length}条`}；知识点由桌面TXT统一同步，网站内只读。</p></section>
     <div class="section-title"><div><h2>${chapters.length}个章节</h2><p>章节内使用上一条、下一条切换</p></div></div>
-    <section class="category-grid knowledge-chapter-grid">${cards}</section>
-    <button id="restoreKnowledgeFromChapters" class="button button-secondary full-width-button">恢复${module.label}默认内容</button>`;
+    <section class="category-grid knowledge-chapter-grid">${cards}</section>`;
   app.querySelectorAll('[data-knowledge-chapter]').forEach(button => button.addEventListener('click', () => {
-    renderKnowledgePoint(moduleKey, button.dataset.knowledgeChapter, 0);
+    renderKnowledgePoint(moduleKey, button.dataset.knowledgeChapter, 0, subject?.key || null);
   }));
-  app.querySelector('#restoreKnowledgeFromChapters').addEventListener('click', restoreKnowledgeDefaults);
 }
 
 function getKnowledgeChapterItems(moduleKey, chapterKey) {
   return getKnowledgeModule(moduleKey).items.filter(item => item.chapter === chapterKey);
 }
 
-function renderKnowledgePoint(moduleKey = 'computer', chapterKey = null, chapterIndex = 0) {
+function renderKnowledgePoint(moduleKey = 'computer', chapterKey = null, chapterIndex = 0, subjectKey = null) {
   const module = getKnowledgeModule(moduleKey);
-  const resolvedChapter = getKnowledgeChapter(moduleKey, chapterKey || module.items[0]?.chapter);
+  const resolvedSubject = moduleKey === 'math' ? getKnowledgeSubject(subjectKey || view.knowledgeSubject || module.items[0]?.subject) : null;
+  const resolvedChapter = getKnowledgeChapter(moduleKey, chapterKey || module.items[0]?.chapter, resolvedSubject?.key);
   const chapterItems = getKnowledgeChapterItems(moduleKey, resolvedChapter.key);
   if (!chapterItems.length) {
-    renderKnowledgeChapters(moduleKey);
+    renderKnowledgeChapters(moduleKey, resolvedSubject?.key || null);
     showToast('该章节暂无知识点');
     return;
   }
   const safeIndex = Math.max(0, Math.min(chapterIndex, chapterItems.length - 1));
   const point = chapterItems[safeIndex];
   const moduleIndex = module.items.findIndex(item => item.uid === point.uid);
-  view = { ...view, screen: 'knowledge', knowledgeModule: moduleKey, knowledgeChapter: resolvedChapter.key, knowledgeChapterIndex: safeIndex, knowledgeIndex: moduleIndex };
+  view = { ...view, screen: 'knowledge', knowledgeModule: moduleKey, knowledgeSubject: resolvedSubject?.key || null, knowledgeChapter: resolvedChapter.key, knowledgeChapterIndex: safeIndex, knowledgeIndex: moduleIndex };
   setHeader(true);
   app.innerHTML = `
     <div class="toolbar">
-      <div class="toolbar-left"><span class="pill">${module.label}</span><span class="pill">${escapeHtml(resolvedChapter.label)}</span><span class="pill">${safeIndex + 1}/${chapterItems.length}</span></div>
-      <div class="toolbar-right knowledge-tools">
-        <button id="editKnowledge" class="mini-button">修改本条</button>
-        <button id="insertKnowledge" class="mini-button">在本条后插入</button>
-        <button id="deleteKnowledge" class="mini-button danger-mini-button">删除本条</button>
-        <button id="restoreKnowledge" class="mini-button">恢复默认</button>
-      </div>
+      <div class="toolbar-left"><span class="pill">${module.label}</span>${resolvedSubject ? `<span class="pill">${escapeHtml(resolvedSubject.label)}</span>` : ''}<span class="pill">${escapeHtml(resolvedChapter.label)}</span><span class="pill">${safeIndex + 1}/${chapterItems.length}</span></div>
     </div>
     <article class="question-card knowledge-card">
-      <div class="question-head"><span class="question-number">本章第 ${safeIndex + 1} 条</span><span class="difficulty">${point.custom ? '新增知识点' : '逐条学习'}</span></div>
+      <div class="question-head"><span class="question-number">本章第 ${safeIndex + 1} 条</span><span class="difficulty">${escapeHtml(point.stableId || '逐条学习')}</span></div>
       <h2>${escapeHtml(point.title)}</h2>
-      <div class="knowledge-content">${renderKnowledgeContent(point.content)}</div>
+      ${point.content ? `<div class="knowledge-content">${renderKnowledgeContent(point.content)}</div>` : ''}
       <div class="knowledge-nav">
         <button id="previousKnowledge" class="button button-secondary" ${safeIndex === 0 ? 'disabled' : ''}>上一条</button>
         <button id="nextKnowledge" class="button button-primary" ${safeIndex === chapterItems.length - 1 ? 'disabled' : ''}>下一条</button>
@@ -495,10 +534,6 @@ function renderKnowledgePoint(moduleKey = 'computer', chapterKey = null, chapter
     </article>`;
   app.querySelector('#previousKnowledge').addEventListener('click', previousKnowledgePoint);
   app.querySelector('#nextKnowledge').addEventListener('click', nextKnowledgePoint);
-  app.querySelector('#editKnowledge').addEventListener('click', () => openKnowledgeEditor('edit'));
-  app.querySelector('#insertKnowledge').addEventListener('click', () => openKnowledgeEditor('insert'));
-  app.querySelector('#deleteKnowledge').addEventListener('click', deleteKnowledgePoint);
-  app.querySelector('#restoreKnowledge').addEventListener('click', restoreKnowledgeDefaults);
 }
 
 function nextKnowledgePoint() {
@@ -507,7 +542,7 @@ function nextKnowledgePoint() {
     showToast('已经是本章最后一条');
     return;
   }
-  renderKnowledgePoint(view.knowledgeModule, view.knowledgeChapter, view.knowledgeChapterIndex + 1);
+  renderKnowledgePoint(view.knowledgeModule, view.knowledgeChapter, view.knowledgeChapterIndex + 1, view.knowledgeSubject);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -516,7 +551,7 @@ function previousKnowledgePoint() {
     showToast('已经是本章第一条');
     return;
   }
-  renderKnowledgePoint(view.knowledgeModule, view.knowledgeChapter, view.knowledgeChapterIndex - 1);
+  renderKnowledgePoint(view.knowledgeModule, view.knowledgeChapter, view.knowledgeChapterIndex - 1, view.knowledgeSubject);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1527,14 +1562,14 @@ function showDataDialog() {
   if (existing) existing.remove();
   const dialog = document.createElement('dialog');
   dialog.id = 'dataDialog';
-  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题统计、收藏、随机题组及历史、个人解析、备注，以及两个知识模块的修改、新增、删除和章节调整，都只保存在当前浏览器。建议偶尔导出备份；导入会替换当前浏览器记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出全部记录</button><button id="importData" class="button button-secondary">导入全部记录</button><button id="resetData" class="button button-danger">清空记录并恢复知识点</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
+  dialog.innerHTML = `<div class="dialog-body"><h2>备份与恢复</h2><p>答题统计、收藏、随机题组及历史、个人解析和备注只保存在当前浏览器。计算机、电力系统和数学知识点由桌面TXT统一同步，网站内只读。建议偶尔导出备份；导入会替换当前浏览器记录。</p><div class="dialog-actions"><button id="exportData" class="button button-primary">导出全部记录</button><button id="importData" class="button button-secondary">导入全部记录</button><button id="resetData" class="button button-danger">清空学习记录</button><button id="closeDialog" class="button button-secondary">关闭</button></div></div>`;
   document.body.appendChild(dialog); dialog.showModal();
   dialog.querySelector('#closeDialog').onclick = () => dialog.close();
   dialog.querySelector('#exportData').onclick = exportData;
   dialog.querySelector('#importData').onclick = () => importInput.click();
   dialog.querySelector('#resetData').onclick = () => {
-    if (confirm('确定清空全部学习记录，并撤销两个知识模块中的修改、新增、删除及章节调整吗？此操作无法撤销。')) {
-      localStorage.removeItem(STORAGE_KEY); progress = loadProgress(); reloadKnowledgeLibraries(); dialog.close(); renderHome(); showToast('全部记录已清空，知识点已恢复默认');
+    if (confirm('确定清空全部学习记录吗？此操作无法撤销。')) {
+      localStorage.removeItem(STORAGE_KEY); progress = loadProgress(); reloadKnowledgeLibraries(); dialog.close(); renderHome(); showToast('全部学习记录已清空');
     }
   };
 }
@@ -1554,7 +1589,7 @@ importInput.addEventListener('change', async event => {
     if (imported?.version !== 1 || !imported.questions) throw new Error('格式不正确');
     if (!Array.isArray(imported.randomSessions)) imported.randomSessions = [];
     if (!Number.isInteger(imported.nextRandomSessionNumber)) imported.nextRandomSessionNumber = imported.randomSessions.reduce((max, item) => Math.max(max, Number(item.number) || 0), 0) + 1;
-    progress = imported; reloadKnowledgeLibraries(); saveProgress(); showToast('学习记录、随机题组和知识点已恢复'); renderHome();
+    progress = imported; reloadKnowledgeLibraries(); saveProgress(); showToast('学习记录和随机题组已恢复'); renderHome();
   } catch (_) { alert('无法导入：文件格式不正确。'); }
   event.target.value = '';
 });
@@ -1571,8 +1606,9 @@ function goBack() {
   else if (view.screen === 'randomHistory') renderRandomSetup();
   else if (view.screen === 'randomComplete') renderRandomHistory();
   else if (view.screen === 'randomWrongReview') renderRandomComplete();
-  else if (view.screen === 'knowledge') renderKnowledgeChapters(view.knowledgeModule);
-  else if (view.screen === 'knowledgeChapters') view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub();
+  else if (view.screen === 'knowledge') renderKnowledgeChapters(view.knowledgeModule, view.knowledgeSubject);
+  else if (view.screen === 'knowledgeChapters') view.knowledgeModule === 'math' ? renderMathSubjects() : (view.knowledgeModule === 'powerSystem' ? renderPowerSystemHub() : renderComputerHub());
+  else if (view.screen === 'mathSubjects') renderHome();
   else if (view.screen === 'computerQuizSetup') renderComputerHub();
   else if (view.screen === 'computerQuizQuestion' || view.screen === 'computerQuizComplete') renderComputerQuizSetup();
   else if (view.screen === 'powerSystemHub') renderHome();
@@ -1588,17 +1624,20 @@ dataButton.addEventListener('click', showDataDialog);
 
 async function init() {
   try {
-    const [questionResponse, basicsResponse, computerQuizResponse, powerSystemResponse, reviewTopicsResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL), fetch(POWER_SYSTEM_BASICS_URL), fetch(REVIEW_TOPICS_URL)]);
+    const [questionResponse, basicsResponse, computerQuizResponse, powerSystemResponse, mathResponse, reviewTopicsResponse] = await Promise.all([fetch(DATA_URL), fetch(COMPUTER_BASICS_URL), fetch(COMPUTER_QUIZ_URL), fetch(POWER_SYSTEM_BASICS_URL), fetch(MATH_BASICS_URL), fetch(REVIEW_TOPICS_URL)]);
     if (!questionResponse.ok) throw new Error(`题库 HTTP ${questionResponse.status}`);
     if (!basicsResponse.ok) throw new Error(`计算机基础 HTTP ${basicsResponse.status}`);
     if (!computerQuizResponse.ok) throw new Error(`计算机测试题库 HTTP ${computerQuizResponse.status}`);
     if (!powerSystemResponse.ok) throw new Error(`电力系统基础 HTTP ${powerSystemResponse.status}`);
+    if (!mathResponse.ok) throw new Error(`数学基础 HTTP ${mathResponse.status}`);
     if (!reviewTopicsResponse.ok) throw new Error(`专题索引 HTTP ${reviewTopicsResponse.status}`);
-    const [questionPayload, basicsPayload, computerQuizPayload, powerSystemPayload, reviewTopicsPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json(), powerSystemResponse.json(), reviewTopicsResponse.json()]);
+    const [questionPayload, basicsPayload, computerQuizPayload, powerSystemPayload, mathPayload, reviewTopicsPayload] = await Promise.all([questionResponse.json(), basicsResponse.json(), computerQuizResponse.json(), powerSystemResponse.json(), mathResponse.json(), reviewTopicsResponse.json()]);
     questions = questionPayload.questions;
     metadata = questionPayload.metadata;
     defaultComputerBasics = basicsPayload.items;
     defaultPowerSystemBasics = powerSystemPayload.items;
+    mathBasics = mathPayload.items;
+    mathSubjects = mathPayload.metadata.subjects;
     reloadKnowledgeLibraries();
     saveProgress();
     computerQuizQuestions = computerQuizPayload.questions;

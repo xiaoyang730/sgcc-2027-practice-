@@ -8,6 +8,8 @@
 - 六类题目：单选、多选两选、多选三选、多选全选、判断对、判断错
 - 每题正确/错误次数、正确率和重点复习统计
 - 学习记录保存在当前浏览器，可导出和导入
+- 计算机基础57条、电力系统基础76条和数学基础81条逐条学习
+- 三个知识模块在网站内只读，由桌面TXT统一同步；计算机基础另含随机测试
 
 ## GitHub Pages
 
@@ -17,4 +19,4 @@
 
 ## 数据说明
 
-`data/questions.json` 包含完整题库。此仓库和GitHub Pages均为公开内容，不包含用户的本地学习记录。
+`data/questions.json` 包含完整题库，`data/computer-basics.json`、`data/power-system-basics.json`和`data/math-basics.json`包含三个知识模块。此仓库和GitHub Pages均为公开内容，不包含用户的本地学习记录。

@@ -1,0 +1,908 @@
+{
+  "metadata": {
+    "title": "数学基础知识点",
+    "version": "math_basics_desktop_source_v1",
+    "record_count": 81,
+    "presentation": "subject_chapter_single_item_readonly",
+    "source_note": "由桌面“数学.txt”同步生成；仅做结构化整理，未改写原知识内容。",
+    "subjects": [
+      {
+        "source": "高数",
+        "key": "calculus",
+        "label": "高等数学",
+        "chapters": [
+          {
+            "key": "calculus-1",
+            "label": "函数、极限、连续",
+            "description": "",
+            "count": 4
+          },
+          {
+            "key": "calculus-2",
+            "label": "一元函数微分学",
+            "description": "",
+            "count": 3
+          },
+          {
+            "key": "calculus-3",
+            "label": "一元函数积分学",
+            "description": "",
+            "count": 4
+          },
+          {
+            "key": "calculus-4",
+            "label": "多元函数微分学",
+            "description": "",
+            "count": 3
+          },
+          {
+            "key": "calculus-5",
+            "label": "多元函数积分学",
+            "description": "",
+            "count": 2
+          },
+          {
+            "key": "calculus-6",
+            "label": "常微分方程",
+            "description": "",
+            "count": 0
+          },
+          {
+            "key": "calculus-7",
+            "label": "无穷级数",
+            "description": "",
+            "count": 7
+          }
+        ]
+      },
+      {
+        "source": "线性代数",
+        "key": "linear-algebra",
+        "label": "线性代数",
+        "chapters": [
+          {
+            "key": "linear-algebra-1",
+            "label": "行列式",
+            "description": "",
+            "count": 3
+          },
+          {
+            "key": "linear-algebra-2",
+            "label": "矩阵",
+            "description": "",
+            "count": 8
+          },
+          {
+            "key": "linear-algebra-3",
+            "label": "向量",
+            "description": "",
+            "count": 9
+          },
+          {
+            "key": "linear-algebra-4",
+            "label": "线性方程组",
+            "description": "",
+            "count": 3
+          },
+          {
+            "key": "linear-algebra-5",
+            "label": "矩阵的相似及化简",
+            "description": "",
+            "count": 5
+          },
+          {
+            "key": "linear-algebra-6",
+            "label": "二次型",
+            "description": "",
+            "count": 6
+          }
+        ]
+      },
+      {
+        "source": "概率论",
+        "key": "probability-statistics",
+        "label": "概率论与数理统计",
+        "chapters": [
+          {
+            "key": "probability-statistics-1",
+            "label": "概率论的基本概念",
+            "description": "",
+            "count": 3
+          },
+          {
+            "key": "probability-statistics-2",
+            "label": "随机变量及其分布",
+            "description": "",
+            "count": 6
+          },
+          {
+            "key": "probability-statistics-3",
+            "label": "多维随机变量的分布",
+            "description": "",
+            "count": 0
+          },
+          {
+            "key": "probability-statistics-4",
+            "label": "随机变量的数字特征",
+            "description": "",
+            "count": 2
+          },
+          {
+            "key": "probability-statistics-5",
+            "label": "大数定律和中心极限定理",
+            "description": "",
+            "count": 0
+          },
+          {
+            "key": "probability-statistics-6",
+            "label": "统计及其抽样分布",
+            "description": "",
+            "count": 0
+          },
+          {
+            "key": "probability-statistics-7",
+            "label": "参数估计",
+            "description": "",
+            "count": 3
+          },
+          {
+            "key": "probability-statistics-8",
+            "label": "假设检验",
+            "description": "",
+            "count": 4
+          },
+          {
+            "key": "probability-statistics-9",
+            "label": "回归分析",
+            "description": "",
+            "count": 0
+          }
+        ]
+      },
+      {
+        "source": "大学数学的应用与实践",
+        "key": "applications",
+        "label": "大学数学的应用与实践",
+        "chapters": [
+          {
+            "key": "applications-1",
+            "label": "人工智能的数学基础",
+            "description": "",
+            "count": 6
+          }
+        ]
+      }
+    ]
+  },
+  "items": [
+    {
+      "id": 1,
+      "stableId": "MATH-001",
+      "uid": "math-source-1",
+      "title": "奇*奇=偶，奇*偶=奇，偶*偶=偶",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-1"
+    },
+    {
+      "id": 2,
+      "stableId": "MATH-002",
+      "uid": "math-source-2",
+      "title": "连续的奇函数的原函数一定是偶函数，连续的偶函数的原函数仅有一个是奇函数",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-1"
+    },
+    {
+      "id": 3,
+      "stableId": "MATH-003",
+      "uid": "math-source-3",
+      "title": "洛必达法则可能失效，即求导后极限不存在无法得到原极限不存在",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-1"
+    },
+    {
+      "id": 4,
+      "stableId": "MATH-004",
+      "uid": "math-source-4",
+      "title": "数列收敛必有界，且子数列必收敛",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-1"
+    },
+    {
+      "id": 5,
+      "stableId": "MATH-005",
+      "uid": "math-source-5",
+      "title": "严格单调函数必有反函数，且与原函数保持同向单调，但有反函数的函数不一定是单调函数",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-2"
+    },
+    {
+      "id": 6,
+      "stableId": "MATH-006",
+      "uid": "math-source-6",
+      "title": "三大中值定理共同条件：闭区间连续，开区间可导，至少存在一点",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-2"
+    },
+    {
+      "id": 7,
+      "stableId": "MATH-007",
+      "uid": "math-source-7",
+      "title": "驻点：一阶导数为0",
+      "content": "凹凸性：二阶导>0为凹，二阶导<0为凸\n拐点：二阶导为0，且两侧变号，二阶导不存在的点也可能是",
+      "subject": "calculus",
+      "chapter": "calculus-2"
+    },
+    {
+      "id": 8,
+      "stableId": "MATH-008",
+      "uid": "math-source-8",
+      "title": "不定积分存在定理",
+      "content": "连续函数必有原函数\n第一类间断点的一定没有\n第二类间断点的可能有",
+      "subject": "calculus",
+      "chapter": "calculus-3"
+    },
+    {
+      "id": 9,
+      "stableId": "MATH-009",
+      "uid": "math-source-9",
+      "title": "定积分存在定理",
+      "content": "连续\n单调\n有界且只有有限个间断点",
+      "subject": "calculus",
+      "chapter": "calculus-3"
+    },
+    {
+      "id": 10,
+      "stableId": "MATH-010",
+      "uid": "math-source-10",
+      "title": "变限积分只要存在必然连续",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-3"
+    },
+    {
+      "id": 11,
+      "stableId": "MATH-011",
+      "uid": "math-source-11",
+      "title": "定积分公式又称为牛顿——莱布尼茨公式",
+      "content": "矩形法是定积分的近似计算方法",
+      "subject": "calculus",
+      "chapter": "calculus-3"
+    },
+    {
+      "id": 12,
+      "stableId": "MATH-012",
+      "uid": "math-source-12",
+      "title": "偏导数连续>可微>连续且偏导数存在，反向不成立且连续和偏导数存在不可互推",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-4"
+    },
+    {
+      "id": 13,
+      "stableId": "MATH-013",
+      "uid": "math-source-13",
+      "title": "梯度是偏导数组成的向量，方向指向函数增长最快方向，模为方向导数的最大值",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-4"
+    },
+    {
+      "id": 14,
+      "stableId": "MATH-014",
+      "uid": "math-source-14",
+      "title": "二重极限存在，两个累次极限不一定存在；",
+      "content": "两个累次极限都存在且相等，二重极限也不一定存在；\n若二重极限存在，且两个累次极限都存在，则三者一定相等。",
+      "subject": "calculus",
+      "chapter": "calculus-4"
+    },
+    {
+      "id": 15,
+      "stableId": "MATH-015",
+      "uid": "math-source-15",
+      "title": "重积分可表示质量、质心、转动惯量、引力、面积等连续量",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-5"
+    },
+    {
+      "id": 16,
+      "stableId": "MATH-016",
+      "uid": "math-source-16",
+      "title": "第一类曲线积分（对弧长）与方向无关，第二类曲线积分（对坐标）与方向有关",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-5"
+    },
+    {
+      "id": 17,
+      "stableId": "MATH-017",
+      "uid": "math-source-17",
+      "title": "级数收敛的必要条件就是极限趋于0，极限不趋于0一定发散",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 18,
+      "stableId": "MATH-018",
+      "uid": "math-source-18",
+      "title": "加括号提高收敛性，加绝对值提高发散性",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 19,
+      "stableId": "MATH-019",
+      "uid": "math-source-19",
+      "title": "正项级数判别：比较判别、比值判别、根值判别",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 20,
+      "stableId": "MATH-020",
+      "uid": "math-source-20",
+      "title": "交错级数：极限趋于0且单调递减，则一定收敛（莱布尼茨判别）",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 21,
+      "stableId": "MATH-021",
+      "uid": "math-source-21",
+      "title": "收敛加减收敛=收敛，收敛加减发散=发散，发散加减发散=不确定",
+      "content": "绝对加减绝对=绝对，绝对加减条件=条件，条件加减条件=不确定\n绝对乘以绝对=绝对",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 22,
+      "stableId": "MATH-022",
+      "uid": "math-source-22",
+      "title": "收敛半径-收敛区间-收敛域（考虑端点）",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 23,
+      "stableId": "MATH-023",
+      "uid": "math-source-23",
+      "title": "幂级数在收敛区间，任意阶可导，任意阶可积",
+      "content": "",
+      "subject": "calculus",
+      "chapter": "calculus-7"
+    },
+    {
+      "id": 24,
+      "stableId": "MATH-024",
+      "uid": "math-source-24",
+      "title": "逆序数",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-1"
+    },
+    {
+      "id": 25,
+      "stableId": "MATH-025",
+      "uid": "math-source-25",
+      "title": "余子式M、代数余子式A",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-1"
+    },
+    {
+      "id": 26,
+      "stableId": "MATH-026",
+      "uid": "math-source-26",
+      "title": "范德蒙德行列式的第一行都为1",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-1"
+    },
+    {
+      "id": 27,
+      "stableId": "MATH-027",
+      "uid": "math-source-27",
+      "title": "非奇异矩阵即n阶方阵A的行列式不为0",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 28,
+      "stableId": "MATH-028",
+      "uid": "math-source-28",
+      "title": "A、B可逆，A+B不一定可逆，只有方阵是存在可逆的可能的",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 29,
+      "stableId": "MATH-029",
+      "uid": "math-source-29",
+      "title": "矩阵乘法一般不满足交换律",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 30,
+      "stableId": "MATH-030",
+      "uid": "math-source-30",
+      "title": "矩阵的秩等于行秩等于列秩",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 31,
+      "stableId": "MATH-031",
+      "uid": "math-source-31",
+      "title": "初等变换不改变矩阵的秩",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 32,
+      "stableId": "MATH-032",
+      "uid": "math-source-32",
+      "title": "矩阵等价即同型且秩相同",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 33,
+      "stableId": "MATH-033",
+      "uid": "math-source-33",
+      "title": "对称矩阵，反对称矩阵，正交矩阵",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 34,
+      "stableId": "MATH-034",
+      "uid": "math-source-34",
+      "title": "任何矩阵都可以转换为阶梯型矩阵，任何可逆矩阵都能转换为单位矩阵",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-2"
+    },
+    {
+      "id": 35,
+      "stableId": "MATH-035",
+      "uid": "math-source-35",
+      "title": "含有零向量或者成比例向量的向量组必线性相关",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 36,
+      "stableId": "MATH-036",
+      "uid": "math-source-36",
+      "title": "线性相关的充要条件是向量组中 至少有一个向量 可以由其余n-1个向量线性表出",
+      "content": "线性无关的充要条件是向量组中 任意一个向量  都不能被其余n-1向量线性表出",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 37,
+      "stableId": "MATH-037",
+      "uid": "math-source-37",
+      "title": "线性无关向量组加入一个向量后线性相关，则新向量可由原向量组线性表示，且表示式唯一",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 38,
+      "stableId": "MATH-038",
+      "uid": "math-source-38",
+      "title": "秩等于向量个数则线性无关，小于向量个数则线性相关",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 39,
+      "stableId": "MATH-039",
+      "uid": "math-source-39",
+      "title": "少表多，多相关",
+      "content": "无关被表，个数不多",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 40,
+      "stableId": "MATH-040",
+      "uid": "math-source-40",
+      "title": "部分相关则整体相关；整体无关则部分无关",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 41,
+      "stableId": "MATH-041",
+      "uid": "math-source-41",
+      "title": "原来无关，延长必无关；原来相关，缩短必相关",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 42,
+      "stableId": "MATH-042",
+      "uid": "math-source-42",
+      "title": "非零正交向量组一定是线性无关组",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 43,
+      "stableId": "MATH-043",
+      "uid": "math-source-43",
+      "title": "正交矩阵：逆矩阵也是正交矩阵，且行列式的值为1或-1",
+      "content": "A、B正交矩阵，那么AB也是正交矩阵\n充要条件是任意两个行（列）向量都正交且为单位向量",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-3"
+    },
+    {
+      "id": 44,
+      "stableId": "MATH-044",
+      "uid": "math-source-44",
+      "title": "极大无关组不唯一，但所含向量个数等于秩，且向量组的任意向量都可以被极大线性无关组表示",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-4"
+    },
+    {
+      "id": 45,
+      "stableId": "MATH-045",
+      "uid": "math-source-45",
+      "title": "齐次线性方程组",
+      "content": "线性无关\t只有零解\t\tr(A)=n\n线性相关\t有非零解\t\tr(A)<n",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-4"
+    },
+    {
+      "id": 46,
+      "stableId": "MATH-046",
+      "uid": "math-source-46",
+      "title": "非齐次线性方程组",
+      "content": "无穷多解\tr(A)=r(A,b)<n\n唯一解\t\tr(A)=r(A,b)=n\n无解\t\tr(A)+1=r(A,b)",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-4"
+    },
+    {
+      "id": 47,
+      "stableId": "MATH-047",
+      "uid": "math-source-47",
+      "title": "矩阵相似则特征多项式相等，行列式相等，特征值相等，秩相等，特征向量一般不一样",
+      "content": "同时是否可逆，是否可相似对角化",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-5"
+    },
+    {
+      "id": 48,
+      "stableId": "MATH-048",
+      "uid": "math-source-48",
+      "title": "特征值相同推不出相似，但两个实对称矩阵特征值相同可以推出相似并且合同",
+      "content": "相似的充分条件：特征值相同且都能对角化\n对角化的充分条件：有n个不同的特征值或者为实对称矩阵",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-5"
+    },
+    {
+      "id": 49,
+      "stableId": "MATH-049",
+      "uid": "math-source-49",
+      "title": "不同特征值的特征向量一定线性无关，同一特征值的特征向量不一定线性无关",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-5"
+    },
+    {
+      "id": 50,
+      "stableId": "MATH-050",
+      "uid": "math-source-50",
+      "title": "实对称矩阵：必有n个线性无关的特征向量",
+      "content": "必可相似对角化\n特征值为实数，不同特征值对应的特征向量相互正交\n存在正交矩阵，相似对角化",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-5"
+    },
+    {
+      "id": 51,
+      "stableId": "MATH-051",
+      "uid": "math-source-51",
+      "title": "矩阵和转置矩阵的特征值相同，但对应的特征向量一般不同",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-5"
+    },
+    {
+      "id": 52,
+      "stableId": "MATH-052",
+      "uid": "math-source-52",
+      "title": "标准型：只含平方项，不唯一",
+      "content": "规范型：标准型基础上系数只取-1、0、1，唯一",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-6"
+    },
+    {
+      "id": 53,
+      "stableId": "MATH-053",
+      "uid": "math-source-53",
+      "title": "正负惯性指数唯一",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-6"
+    },
+    {
+      "id": 54,
+      "stableId": "MATH-054",
+      "uid": "math-source-54",
+      "title": "正定矩阵：特征值都大于0，正惯性指数n，各阶顺势主子式全大于0",
+      "content": "半正定：特征值大于等于0，至少有一个等于0\n负定、半负定、不定",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-6"
+    },
+    {
+      "id": 55,
+      "stableId": "MATH-055",
+      "uid": "math-source-55",
+      "title": "正交变换得到的标准型的系数是特征值，配方法得到的不是",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-6"
+    },
+    {
+      "id": 56,
+      "stableId": "MATH-056",
+      "uid": "math-source-56",
+      "title": "相似和合同都可以推出等价，但相似和合同不能互推（除非是实对称矩阵，相似可以推出合同）",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-6"
+    },
+    {
+      "id": 57,
+      "stableId": "MATH-057",
+      "uid": "math-source-57",
+      "title": "实对称矩阵，正负惯性指数相等则合同",
+      "content": "",
+      "subject": "linear-algebra",
+      "chapter": "linear-algebra-6"
+    },
+    {
+      "id": 58,
+      "stableId": "MATH-058",
+      "uid": "math-source-58",
+      "title": "互斥是交集为0，对立是在此基础上相加规律为1",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-1"
+    },
+    {
+      "id": 59,
+      "stableId": "MATH-059",
+      "uid": "math-source-59",
+      "title": "概率为0、1的事件与任意事件相互独立",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-1"
+    },
+    {
+      "id": 60,
+      "stableId": "MATH-060",
+      "uid": "math-source-60",
+      "title": "A、B独立，则彼此的对立事件也独立",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-1"
+    },
+    {
+      "id": 61,
+      "stableId": "MATH-061",
+      "uid": "math-source-61",
+      "title": "分布函数：\t单调不减",
+      "content": "有界性，负无穷为0，正无穷为1\n右连续",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-2"
+    },
+    {
+      "id": 62,
+      "stableId": "MATH-062",
+      "uid": "math-source-62",
+      "title": "若X连续，那么其分布函数服从U(0,1)",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-2"
+    },
+    {
+      "id": 63,
+      "stableId": "MATH-063",
+      "uid": "math-source-63",
+      "title": "柯西分布的期望和方差都不存在，有很多较大的极端值",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-2"
+    },
+    {
+      "id": 64,
+      "stableId": "MATH-064",
+      "uid": "math-source-64",
+      "title": "如何判断仍然为连续型的分布函数和概率密度函数",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-2"
+    },
+    {
+      "id": 65,
+      "stableId": "MATH-065",
+      "uid": "math-source-65",
+      "title": "概率密度函数非负可积分，不一定连续，积分为1",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-2"
+    },
+    {
+      "id": 66,
+      "stableId": "MATH-066",
+      "uid": "math-source-66",
+      "title": "连续型随机变量的分布函数一定是连续函数",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-2"
+    },
+    {
+      "id": 67,
+      "stableId": "MATH-067",
+      "uid": "math-source-67",
+      "title": "离散型随机变量若级数收敛，则期望存在",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-4"
+    },
+    {
+      "id": 68,
+      "stableId": "MATH-068",
+      "uid": "math-source-68",
+      "title": "独立一定不相关，不相关不一定独立，但如果是联合正态分布则都成立",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-4"
+    },
+    {
+      "id": 69,
+      "stableId": "MATH-069",
+      "uid": "math-source-69",
+      "title": "无偏估计",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-7"
+    },
+    {
+      "id": 70,
+      "stableId": "MATH-070",
+      "uid": "math-source-70",
+      "title": "有效性：基于无偏估计的基础上，方差更小的有效性更好",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-7"
+    },
+    {
+      "id": 71,
+      "stableId": "MATH-071",
+      "uid": "math-source-71",
+      "title": "极大似然估计是求似然函数的最大值点，注意额外的约束产生的边界",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-7"
+    },
+    {
+      "id": 72,
+      "stableId": "MATH-072",
+      "uid": "math-source-72",
+      "title": "等号只能出现在原假设，不能出现在备择假设",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 73,
+      "stableId": "MATH-073",
+      "uid": "math-source-73",
+      "title": "显著性水平越大，拒绝域越大，越容易拒绝原假设",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 74,
+      "stableId": "MATH-074",
+      "uid": "math-source-74",
+      "title": "显著性水平是犯第一类错误的概率，即弃真的错误",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 75,
+      "stableId": "MATH-075",
+      "uid": "math-source-75",
+      "title": "样本容量上升，则犯两类错误的概率都下降",
+      "content": "样本容量恒定，则两类错误此消彼长",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 76,
+      "stableId": "MATH-076",
+      "uid": "math-source-76",
+      "title": "梯度下降算法：沿着负梯度方向更新参数，使目标函数下降（机器学习中无约束数据优化的核心方法）",
+      "content": "",
+      "subject": "applications",
+      "chapter": "applications-1"
+    },
+    {
+      "id": 77,
+      "stableId": "MATH-077",
+      "uid": "math-source-77",
+      "title": "无约束优化算法（是否有约束条件）：梯度下降法、牛顿法、最小二乘法",
+      "content": "",
+      "subject": "applications",
+      "chapter": "applications-1"
+    },
+    {
+      "id": 78,
+      "stableId": "MATH-078",
+      "uid": "math-source-78",
+      "title": "多层感知机非常适合处理表格数据",
+      "content": "",
+      "subject": "applications",
+      "chapter": "applications-1"
+    },
+    {
+      "id": 79,
+      "stableId": "MATH-079",
+      "uid": "math-source-79",
+      "title": "CNN含有卷积层和池化层，不是循环神经网络",
+      "content": "卷积层负责提取局部特征，池化层负责降维和增强平移不变性\nRNN处理序列，CNN更常用于图像和局部特征提取",
+      "subject": "applications",
+      "chapter": "applications-1"
+    },
+    {
+      "id": 80,
+      "stableId": "MATH-080",
+      "uid": "math-source-80",
+      "title": "学习率太大可能震荡甚至发散，学习率太小会收敛很慢",
+      "content": "",
+      "subject": "applications",
+      "chapter": "applications-1"
+    },
+    {
+      "id": 81,
+      "stableId": "MATH-081",
+      "uid": "math-source-81",
+      "title": "梯度法计算简单但可能慢，牛顿法收敛快但计算量大",
+      "content": "",
+      "subject": "applications",
+      "chapter": "applications-1"
+    }
+  ]
+}
