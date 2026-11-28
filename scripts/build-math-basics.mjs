@@ -56,9 +56,6 @@ function addChapter(label) {
 function addItem(title) {
   if (!currentChapter) fail(`知识点“${title}”之前缺少章节标题`);
   currentItem = {
-    id: items.length + 1,
-    stableId: `MATH-${String(items.length + 1).padStart(3, '0')}`,
-    uid: `math-source-${items.length + 1}`,
     title: title.trim(),
     contentLines: [],
     subject: currentSubject.key,
@@ -98,20 +95,49 @@ for (const expected of SUBJECTS) {
 }
 if (!items.length) fail('未解析到任何数学知识点');
 
-const outputItems = items.map(item => ({
-  id: item.id,
-  stableId: item.stableId,
-  uid: item.uid,
-  title: item.title,
-  content: item.contentLines.join('\n'),
-  subject: item.subject,
-  chapter: item.chapter,
-}));
+const outputPath = path.join(siteRoot, 'data', 'math-basics.json');
+let existingItems = [];
+if (fs.existsSync(outputPath)) {
+  try {
+    const existingPayload = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    if (Array.isArray(existingPayload.items)) existingItems = existingPayload.items;
+  } catch (error) {
+    fail(`无法读取现有数学数据以保留稳定编号：${error.message}`);
+  }
+}
+
+function itemSignature(item) {
+  return JSON.stringify([item.subject, item.chapter, item.title, item.content || '']);
+}
+
+const existingBySignature = new Map();
+for (const item of existingItems) {
+  const signature = itemSignature(item);
+  if (!existingBySignature.has(signature)) existingBySignature.set(signature, []);
+  existingBySignature.get(signature).push(item);
+}
+let nextStableNumber = existingItems.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+const outputItems = items.map(item => {
+  const base = {
+    title: item.title,
+    content: item.contentLines.join('\n'),
+    subject: item.subject,
+    chapter: item.chapter,
+  };
+  const matched = existingBySignature.get(itemSignature(base))?.shift();
+  const id = matched ? Number(matched.id) : nextStableNumber++;
+  return {
+    id,
+    stableId: matched?.stableId || `MATH-${String(id).padStart(3, '0')}`,
+    uid: matched?.uid || `math-source-${id}`,
+    ...base,
+  };
+});
 
 const payload = {
   metadata: {
     title: '数学基础知识点',
-    version: 'math_basics_desktop_source_v1',
+    version: 'math_basics_desktop_source_v2',
     record_count: outputItems.length,
     presentation: 'subject_chapter_single_item_readonly',
     source_note: '由桌面“数学.txt”同步生成；仅做结构化整理，未改写原知识内容。',
@@ -150,7 +176,7 @@ for (const subject of subjects) {
 fs.mkdirSync(sourceDir, { recursive: true });
 fs.writeFileSync(path.join(sourceDir, '数学.txt'), `${txtParts.join('\n').trimEnd()}\n`, 'utf8');
 fs.writeFileSync(path.join(sourceDir, '数学.md'), `${mdParts.join('\n').trimEnd()}\n`, 'utf8');
-fs.writeFileSync(path.join(siteRoot, 'data', 'math-basics.json'), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 
 console.log(JSON.stringify({
   source: inputPath,
@@ -160,6 +186,6 @@ console.log(JSON.stringify({
   outputs: [
     path.join(sourceDir, '数学.txt'),
     path.join(sourceDir, '数学.md'),
-    path.join(siteRoot, 'data', 'math-basics.json'),
+    outputPath,
   ],
 }, null, 2));

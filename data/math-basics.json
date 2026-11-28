@@ -1,8 +1,8 @@
 {
   "metadata": {
     "title": "数学基础知识点",
-    "version": "math_basics_desktop_source_v1",
-    "record_count": 81,
+    "version": "math_basics_desktop_source_v2",
+    "record_count": 85,
     "presentation": "subject_chapter_single_item_readonly",
     "source_note": "由桌面“数学.txt”同步生成；仅做结构化整理，未改写原知识内容。",
     "subjects": [
@@ -137,7 +137,7 @@
             "key": "probability-statistics-6",
             "label": "统计及其抽样分布",
             "description": "",
-            "count": 0
+            "count": 1
           },
           {
             "key": "probability-statistics-7",
@@ -149,7 +149,7 @@
             "key": "probability-statistics-8",
             "label": "假设检验",
             "description": "",
-            "count": 4
+            "count": 7
           },
           {
             "key": "probability-statistics-9",
@@ -788,6 +788,15 @@
       "chapter": "probability-statistics-4"
     },
     {
+      "id": 82,
+      "stableId": "MATH-082",
+      "uid": "math-source-82",
+      "title": "统计量不得含有未知参数",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-6"
+    },
+    {
       "id": 69,
       "stableId": "MATH-069",
       "uid": "math-source-69",
@@ -847,6 +856,33 @@
       "uid": "math-source-75",
       "title": "样本容量上升，则犯两类错误的概率都下降",
       "content": "样本容量恒定，则两类错误此消彼长",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 83,
+      "stableId": "MATH-083",
+      "uid": "math-source-83",
+      "title": "p值越小，拒绝原假设的理由越充分，p<显著性水平则拒绝原假设",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 84,
+      "stableId": "MATH-084",
+      "uid": "math-source-84",
+      "title": "显著性水平越大，拒绝域越大，更容易拒绝原假设",
+      "content": "",
+      "subject": "probability-statistics",
+      "chapter": "probability-statistics-8"
+    },
+    {
+      "id": 85,
+      "stableId": "MATH-085",
+      "uid": "math-source-85",
+      "title": "大样本时，样本方差可以近似代替总体方差",
+      "content": "",
       "subject": "probability-statistics",
       "chapter": "probability-statistics-8"
     },
